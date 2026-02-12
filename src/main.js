@@ -247,7 +247,29 @@ root.innerHTML = `
       </section>
 
       <section data-view="marketplace" style="display:none" class="view-stack">
-        <div class="panel"><div class="panel-head"><h3>Marketplace</h3></div><div class="catalog-grid" id="catalogGrid"></div></div>
+        <div class="panel">
+          <div class="panel-head"><h3>Marketplace</h3></div>
+          <div class="catalog-grid" id="catalogGrid"></div>
+        </div>
+        <div class="panel marketplace-builder">
+          <div class="panel-head"><h3>Create Catalog Item (Drag & Drop)</h3></div>
+          <p>Drag capability blocks into the canvas, then save as a new marketplace catalog item.</p>
+          <div class="builder-layout">
+            <div class="builder-palette" id="builderPalette">
+              <button class="builder-chip" draggable="true" data-capability="compute">🖥️ Compute</button>
+              <button class="builder-chip" draggable="true" data-capability="database">🗄️ Database</button>
+              <button class="builder-chip" draggable="true" data-capability="network">🌐 Network</button>
+              <button class="builder-chip" draggable="true" data-capability="security">🔐 Security</button>
+              <button class="builder-chip" draggable="true" data-capability="automation">⚙️ Automation</button>
+            </div>
+            <div class="builder-canvas" id="builderCanvas">Drop capability blocks here</div>
+          </div>
+          <form id="builderForm" class="ticket-form">
+            <label><span>Catalog Name</span><input id="builderName" type="text" placeholder="Example: Secure App Blueprint" required /></label>
+            <label><span>Description</span><textarea id="builderDescription" placeholder="Describe the catalog item" required></textarea></label>
+            <button class="btn primary" type="submit">Add to Marketplace</button>
+          </form>
+        </div>
         <div class="panel" id="dialogPanel" style="display:none"></div>
       </section>
     </main>
@@ -544,21 +566,108 @@ const catalogIcons = {
   'Windows Build Agent': '🛠️'
 };
 
-document.getElementById('catalogGrid').innerHTML = state.catalogs
-  .map(
-    (catalog) => `
-  <article class="catalog-card">
-    <h4><span class="catalog-icon">${catalogIcons[catalog.name] || '📦'}</span>${catalog.name}</h4>
-    <p>${catalog.description}</p>
-    <div class="catalog-footer">
-      <span>Template</span>
-      <button class="btn primary" data-order="${catalog.id}">Order Service</button>
-    </div>
-  </article>`
-  )
-  .join('');
+function bindCatalogOrderButtons() {
+  document.querySelectorAll('[data-order]').forEach((button) => {
+    button.addEventListener('click', () => {
+      const id = Number(button.dataset.order);
+      const catalog = state.catalogs.find((c) => c.id === id);
+      const fields = state.dialogs[catalog?.dialogId] || state.dialogs['vm-request'] || [];
+      const panel = document.getElementById('dialogPanel');
+      panel.style.display = 'block';
+      panel.innerHTML = `
+        <div class="panel-head"><h3>${catalog?.name || 'Catalog'} - Service Dialog</h3></div>
+        <div class="dialog-grid">
+          ${fields
+            .map((field) => {
+              if (field.type === 'select') {
+                return `<label><span>${field.label}</span><select>${field.options.map((o) => `<option>${o}</option>`).join('')}</select></label>`;
+              }
+              if (field.type === 'textarea') {
+                return `<label><span>${field.label}</span><textarea></textarea></label>`;
+              }
+              return `<label><span>${field.label}</span><input type="${field.type}" /></label>`;
+            })
+            .join('')}
+        </div>
+        <div style="margin-top:.75rem"><button class="btn primary">Submit Request</button></div>
+      `;
+      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    });
+  });
+}
 
+function renderCatalogGrid() {
+  document.getElementById('catalogGrid').innerHTML = state.catalogs
+    .map(
+      (catalog) => `
+    <article class="catalog-card">
+      <h4><span class="catalog-icon">${catalogIcons[catalog.name] || '📦'}</span>${catalog.name}</h4>
+      <p>${catalog.description}</p>
+      <div class="catalog-footer">
+        <span>Template</span>
+        <button class="btn primary" data-order="${catalog.id}">Order Service</button>
+      </div>
+    </article>`
+    )
+    .join('');
+  bindCatalogOrderButtons();
+}
+
+renderCatalogGrid();
 renderAssetsTable();
+
+const droppedCapabilities = [];
+const capabilityIcons = {
+  compute: '🖥️',
+  database: '🗄️',
+  network: '🌐',
+  security: '🔐',
+  automation: '⚙️'
+};
+
+document.querySelectorAll('.builder-chip').forEach((chip) => {
+  chip.addEventListener('dragstart', (event) => {
+    event.dataTransfer.setData('text/plain', chip.dataset.capability);
+  });
+});
+
+const builderCanvas = document.getElementById('builderCanvas');
+builderCanvas.addEventListener('dragover', (event) => {
+  event.preventDefault();
+  builderCanvas.classList.add('drag-over');
+});
+builderCanvas.addEventListener('dragleave', () => builderCanvas.classList.remove('drag-over'));
+builderCanvas.addEventListener('drop', (event) => {
+  event.preventDefault();
+  builderCanvas.classList.remove('drag-over');
+  const capability = event.dataTransfer.getData('text/plain');
+  if (!capability) return;
+  droppedCapabilities.push(capability);
+  builderCanvas.innerHTML = droppedCapabilities
+    .map((item) => `<span class="capability-pill">${capabilityIcons[item] || '📦'} ${item}</span>`)
+    .join(' ');
+});
+
+document.getElementById('builderForm').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const name = document.getElementById('builderName').value.trim();
+  const description = document.getElementById('builderDescription').value.trim();
+  if (!name || !description) return;
+  const nextId = Math.max(...state.catalogs.map((c) => c.id)) + 1;
+  const capabilitySummary = droppedCapabilities.length ? ` [${droppedCapabilities.join(', ')}]` : '';
+  state.catalogs.unshift({
+    id: nextId,
+    name,
+    description: `${description}${capabilitySummary}`,
+    dialogId: 'vm-request',
+    used: 0
+  });
+  droppedCapabilities.length = 0;
+  builderCanvas.textContent = 'Drop capability blocks here';
+  event.target.reset();
+  renderCatalogGrid();
+  renderSearchResults(orderedServiceStatus);
+});
 
 document.addEventListener('click', async (event) => {
   const target = event.target;
@@ -596,34 +705,6 @@ document.addEventListener('click', async (event) => {
       alert(`Tags updated for service ${serviceId}`);
     }
   }
-});
-
-document.querySelectorAll('[data-order]').forEach((button) => {
-  button.addEventListener('click', () => {
-    const id = Number(button.dataset.order);
-    const catalog = state.catalogs.find((c) => c.id === id);
-    const fields = state.dialogs[catalog.dialogId] || [];
-    const panel = document.getElementById('dialogPanel');
-    panel.style.display = 'block';
-    panel.innerHTML = `
-      <div class="panel-head"><h3>${catalog.name} - Service Dialog</h3></div>
-      <div class="dialog-grid">
-        ${fields
-          .map((field) => {
-            if (field.type === 'select') {
-              return `<label><span>${field.label}</span><select>${field.options.map((o) => `<option>${o}</option>`).join('')}</select></label>`;
-            }
-            if (field.type === 'textarea') {
-              return `<label><span>${field.label}</span><textarea></textarea></label>`;
-            }
-            return `<label><span>${field.label}</span><input type="${field.type}" /></label>`;
-          })
-          .join('')}
-      </div>
-      <div style="margin-top:.75rem"><button class="btn primary">Submit Request</button></div>
-    `;
-    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-  });
 });
 
 document.getElementById('globalSearch').addEventListener('input', () => renderSearchResults(orderedServiceStatus));
