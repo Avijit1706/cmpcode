@@ -26,8 +26,7 @@ const state = {
       lifecycle_state: 'provisioned',
       start_date: '2026-01-10',
       retirement_date: '2027-01-10',
-      retirement_state: 'active',
-      created_on: '2026-01-10'
+      retirement_state: 'active'
     },
     {
       id: 202,
@@ -36,8 +35,7 @@ const state = {
       lifecycle_state: 'pending approval',
       start_date: '2026-02-20',
       retirement_date: '2026-05-01',
-      retirement_state: 'about to retire',
-      created_on: '2026-01-06'
+      retirement_state: 'about to retire'
     },
     {
       id: 203,
@@ -46,8 +44,7 @@ const state = {
       lifecycle_state: 'unprovisioned',
       start_date: '2025-01-16',
       retirement_date: '2026-01-30',
-      retirement_state: 'retired',
-      created_on: '2026-01-16'
+      retirement_state: 'retired'
     },
     {
       id: 204,
@@ -56,8 +53,7 @@ const state = {
       lifecycle_state: 'provisioned',
       start_date: '2026-02-01',
       retirement_date: '2026-04-15',
-      retirement_state: 'about to retire',
-      created_on: '2026-02-01'
+      retirement_state: 'about to retire'
     }
   ],
   vmHealth: [
@@ -109,40 +105,71 @@ const state = {
     { id: 'SO-1103', service_id: 203, catalog_id: 3, ordered_on: '2026-02-06' },
     { id: 'SO-1104', service_id: 204, catalog_id: 4, ordered_on: '2026-02-09' }
   ],
+  notifications: [
+    { source: 'ServiceNow', message: 'CHG-1128 approved for payments-service patching.', timestamp: '2026-02-12T10:02:00Z' },
+    { source: 'Jira ITSM', message: 'INC-20491 linked to etl-batch degradation.', timestamp: '2026-02-12T09:18:00Z' },
+    { source: 'Remedy', message: 'REQ-9032 awaiting finance approver action.', timestamp: '2026-02-12T08:46:00Z' }
+  ],
   supportTickets: [
+    { id: 'SUP-7201', title: 'Need firewall egress rule', impacted_service: 'payments-service', status: 'In Progress', created_on: '2026-02-10' },
+    { id: 'SUP-7190', title: 'Catalog order timeout', impacted_service: 'etl-batch', status: 'Resolved', created_on: '2026-02-04' }
+  ],
+  assets: [
     {
-      id: 'SUP-7201',
-      title: 'Need firewall egress rule',
-      impacted_service: 'payments-service',
-      status: 'In Progress',
-      created_on: '2026-02-10',
-      channel: 'Portal'
+      asset_name: 'vm-payments-01',
+      created_date: '2026-01-10',
+      retirement_date: '2027-01-10',
+      status: 'active',
+      service_id: 201,
+      ip_address: '10.20.31.14',
+      flavour: 'm6i.large',
+      os: 'RHEL 9.3',
+      tags: 'env:prod,team:payments'
     },
     {
-      id: 'SUP-7190',
-      title: 'Catalog order timeout',
-      impacted_service: 'etl-batch',
-      status: 'Resolved',
-      created_on: '2026-02-04',
-      channel: 'Email'
+      asset_name: 'vm-etl-02',
+      created_date: '2026-01-06',
+      retirement_date: '2026-05-01',
+      status: 'degraded',
+      service_id: 202,
+      ip_address: '10.20.44.27',
+      flavour: 'm6i.xlarge',
+      os: 'RHEL 8.9',
+      tags: 'env:stage,team:data'
+    },
+    {
+      asset_name: 'vm-audit-03',
+      created_date: '2025-01-16',
+      retirement_date: '2026-01-30',
+      status: 'retired',
+      service_id: 203,
+      ip_address: '10.20.51.90',
+      flavour: 'm5.large',
+      os: 'Ubuntu 22.04',
+      tags: 'env:archive,team:security'
     }
   ],
-  profile: { username: 'alex.morgan', name: 'Alex Morgan', email: 'alex.morgan@example.com', role: 'Platform Engineer' }
+  profile: { username: 'alex.morgan', name: 'Alex Morgan', email: 'alex.morgan@example.com', role: 'Platform Engineer', isApprover: true }
 };
 
+const assetSort = { key: 'created_date', direction: 'desc' };
 const root = document.getElementById('root');
 
 root.innerHTML = `
   <div class="app-shell">
     <aside class="sidebar" id="sidebar">
       <div class="sidebar-head">
-        <div><p>OPS SUITE</p><h2>Cloud Management Portal</h2></div>
+        <div class="brand-block">
+          <div class="logo-placeholder">LOGO</div>
+          <div><p>OPS SUITE</p><h2>Cloud Management Portal</h2></div>
+        </div>
         <button class="btn muted mobile-only" id="closeSidebar">✕</button>
       </div>
       <nav>
         <button class="nav-item active" data-section="dashboard">dashboard</button>
         <button class="nav-item" data-section="request-status">request status</button>
         <button class="nav-item" data-section="your-services">your services</button>
+        <button class="nav-item" data-section="your-assets">your assets</button>
         <button class="nav-item" data-section="marketplace">marketplace</button>
       </nav>
     </aside>
@@ -156,16 +183,22 @@ root.innerHTML = `
           <div class="search-wrap">
             <input id="globalSearch" type="search" placeholder="Search request id, service id, marketplace item" />
           </div>
-          <button class="btn muted" id="toggleTheme">Toggle Theme</button>
+          <button class="theme-toggle" id="toggleTheme" title="Switch day/night"><span>☀️</span><span>🌙</span></button>
           <div class="profile-chip"><strong>${state.profile.name}</strong><span>${state.profile.role}</span></div>
         </div>
       </header>
 
       <section data-view="dashboard" class="view-stack">
         <div class="card-strip" id="dashboardMetrics"></div>
-        <div class="panel">
-          <div class="panel-head"><h3>Unified Search Results</h3></div>
-          <div id="searchResults"><p>Start typing in the search bar to find request IDs, service IDs, or marketplace items.</p></div>
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-head"><h3>ITSM Notifications</h3></div>
+            <div id="notificationPanel"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Unified Search Results</h3></div>
+            <div id="searchResults"><p>Start typing in the search bar to find request IDs, service IDs, or marketplace items.</p></div>
+          </div>
         </div>
         <div class="grid two-col">
           <div class="panel">
@@ -184,6 +217,7 @@ root.innerHTML = `
             <p class="ticketing-link"><a href="https://support.example.com" target="_blank" rel="noopener noreferrer">Open Ticketing Tool</a></p>
           </div>
         </div>
+        <div class="panel" id="approverPanel" style="display:none"></div>
       </section>
 
       <section data-view="request-status" style="display:none" class="view-stack">
@@ -199,9 +233,17 @@ root.innerHTML = `
           <h3>Service Health Data Source</h3>
           <p>Lifecycle state, start date, and retirement dates are sourced from <strong>/api/services</strong>.</p>
         </div>
+        <div class="service-status-full" id="serviceHealthTables"></div>
         <div class="card-strip" id="healthMetrics"></div>
         <div class="health-tile-grid" id="healthTiles"></div>
-        <div class="service-status-full" id="serviceHealthTables"></div>
+      </section>
+
+      <section data-view="your-assets" style="display:none" class="view-stack">
+        <div class="panel compact">
+          <h3>Your Assets</h3>
+          <p>Assets are sorted by creation date by default. Click any column header to sort by that field.</p>
+        </div>
+        <div class="panel" id="assetsTablePanel"></div>
       </section>
 
       <section data-view="marketplace" style="display:none" class="view-stack">
@@ -216,6 +258,7 @@ function setTheme(next) {
   document.documentElement.setAttribute('data-theme', next);
   localStorage.setItem('portal-theme', next);
 }
+
 setTheme(localStorage.getItem('portal-theme') || 'dark');
 document.getElementById('toggleTheme').addEventListener('click', () => {
   const cur = document.documentElement.getAttribute('data-theme');
@@ -233,15 +276,6 @@ function showSection(section) {
 document.getElementById('openSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.add('open'));
 document.getElementById('closeSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
 document.querySelectorAll('.nav-item').forEach((btn) => btn.addEventListener('click', () => showSection(btn.dataset.section)));
-
-function table(title, rows, cols) {
-  return `
-    <div class="panel compact">
-      <h3>${title}</h3>
-      <div class="table-wrap"><table><thead><tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead>
-      <tbody>${rows.map((r) => `<tr>${cols.map((c) => `<td>${r[c] ?? '-'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
-    </div>`;
-}
 
 function serviceRetirementBadge(retirementState) {
   if (retirementState === 'active') return '<span class="status-badge active">● active</span>';
@@ -272,7 +306,6 @@ function renderOrderStatusRows() {
       approval_pending_with: lifecycleState === 'pending approval' ? request.approval_pending_with || '-' : '-',
       request_details: request.request_details || '-',
       catalog: catalog.name || '-',
-      ordered_on: order.ordered_on || '-',
       requested_on: request.requested_on || '-',
       start_date: service.start_date || '-',
       retirement_date: service.retirement_date || '-',
@@ -346,7 +379,7 @@ function renderSearchResults(rows) {
     return;
   }
   const requestMatches = rows.filter((row) => row.request_id.toLowerCase().includes(input));
-  const serviceMatches = rows.filter((row) => String(row.service_id).toLowerCase().includes(input));
+  const serviceMatches = rows.filter((row) => String(row.service_id).includes(input));
   const marketplaceMatches = state.catalogs.filter((catalog) => catalog.name.toLowerCase().includes(input) || String(catalog.id).includes(input));
 
   const markup = [
@@ -359,15 +392,58 @@ function renderSearchResults(rows) {
     marketplaceMatches.length
       ? `<div><h4>Marketplace Items</h4><ul class="search-list">${marketplaceMatches.map((c) => `<li>${c.id} · ${c.name}</li>`).join('')}</ul></div>`
       : ''
-  ]
-    .filter(Boolean)
-    .join('');
+  ].filter(Boolean).join('');
 
   document.getElementById('searchResults').innerHTML = markup || '<p>No matches for your query.</p>';
 }
 
-const orderedServiceStatus = renderOrderStatusRows();
+async function updateServiceTags(serviceId, tags) {
+  const service = state.services.find((item) => item.id === serviceId);
+  if (service) service.tags = tags;
+  return Promise.resolve({ ok: true });
+}
 
+function renderAssetsTable() {
+  const sorted = [...state.assets].sort((a, b) => {
+    const av = a[assetSort.key];
+    const bv = b[assetSort.key];
+    if (av === bv) return 0;
+    const cmp = String(av).localeCompare(String(bv), undefined, { numeric: true });
+    return assetSort.direction === 'asc' ? cmp : -cmp;
+  });
+
+  const columns = [
+    'asset_name', 'created_date', 'retirement_date', 'status', 'service_id', 'ip_address', 'flavour', 'os', 'tags'
+  ];
+  const headers = columns
+    .map((col) => `<th><button class="sort-btn" data-sort="${col}">${col}${assetSort.key === col ? (assetSort.direction === 'asc' ? ' ↑' : ' ↓') : ''}</button></th>`)
+    .join('');
+
+  document.getElementById('assetsTablePanel').innerHTML = `
+    <div class="table-wrap"><table>
+      <thead><tr>${headers}<th>actions</th></tr></thead>
+      <tbody>
+        ${sorted
+          .map(
+            (asset) => `<tr>
+              <td>${asset.asset_name}</td>
+              <td>${asset.created_date}</td>
+              <td>${asset.retirement_date}</td>
+              <td>${asset.status}</td>
+              <td>${asset.service_id}</td>
+              <td>${asset.ip_address}</td>
+              <td>${asset.flavour}</td>
+              <td>${asset.os}</td>
+              <td>${asset.tags}</td>
+              <td><button class="btn muted small" data-edit-tags="${asset.service_id}">Edit Tags</button></td>
+            </tr>`
+          )
+          .join('')}
+      </tbody>
+    </table></div>`;
+}
+
+const orderedServiceStatus = renderOrderStatusRows();
 const dashboardCards = [
   ['Active Services', orderedServiceStatus.filter((row) => row.retirement_state === 'active').length, 'Operational services'],
   ['Expiring Services (≤ 3 months)', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal planning'],
@@ -378,6 +454,10 @@ const dashboardCards = [
 document.getElementById('dashboardMetrics').innerHTML = dashboardCards
   .map(([label, value, hint]) => `<article class="mini-card"><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
   .join('');
+
+document.getElementById('notificationPanel').innerHTML = `<ul class="notification-list">${state.notifications
+  .map((item) => `<li><strong>${item.source}</strong><small>${new Date(item.timestamp).toLocaleString()}</small><span>${item.message}</span></li>`)
+  .join('')}</ul>`;
 
 const trendingRequests = [...orderedServiceStatus]
   .filter((row) => {
@@ -391,10 +471,20 @@ document.getElementById('trendingRequests').innerHTML =
   trendingRequests.length === 0
     ? '<p>No trending requests in the last 7 days.</p>'
     : `<ul class="trend-list">${trendingRequests
-        .map(
-          (item) => `<li><strong>${item.service_name}</strong><span>${item.requested_on}</span><small>${item.request_status} · ${item.request_details}</small></li>`
-        )
+        .map((item) => `<li><strong>${item.service_name}</strong><span>${item.requested_on}</span><small>${item.request_status} · ${item.request_details}</small></li>`)
         .join('')}</ul>`;
+
+if (state.profile.isApprover) {
+  const pendingApprovals = orderedServiceStatus.filter((row) => row.lifecycle_state === 'pending approval');
+  const approverPanel = document.getElementById('approverPanel');
+  approverPanel.style.display = 'block';
+  approverPanel.innerHTML = `
+    <div class="panel-head"><h3>Pending For Your Approval</h3></div>
+    ${pendingApprovals.length ? `<ul class="approval-list">${pendingApprovals
+      .map((row) => `<li><strong>${row.request_id}</strong><span>${row.service_name}</span><small>${row.request_details}</small></li>`)
+      .join('')}</ul>` : '<p>No requests pending your approval.</p>'}
+  `;
+}
 
 function renderTicketSummary() {
   const openCount = state.supportTickets.filter((ticket) => ticket.status !== 'Resolved').length;
@@ -419,20 +509,13 @@ document.getElementById('ticketForm').addEventListener('submit', (event) => {
   const impactedService = document.getElementById('ticketService').value;
   if (!title || !details || !impactedService) return;
   const newId = `SUP-${7202 + state.supportTickets.length}`;
-  state.supportTickets.unshift({
-    id: newId,
-    title: `${title} (${details})`,
-    impacted_service: impactedService,
-    status: 'New',
-    created_on: '2026-02-12',
-    channel: 'Portal'
-  });
+  state.supportTickets.unshift({ id: newId, title: `${title} (${details})`, impacted_service: impactedService, status: 'New', created_on: '2026-02-12' });
   renderTicketSummary();
   event.target.reset();
 });
 
 document.getElementById('requestTablePanel').innerHTML = renderRequestStatusTable(orderedServiceStatus);
-
+document.getElementById('serviceHealthTables').innerHTML = renderServiceStatusTable(orderedServiceStatus);
 document.getElementById('healthMetrics').innerHTML = [
   ['Provisioned', orderedServiceStatus.filter((row) => row.lifecycle_state === 'provisioned').length, 'Running ordered services'],
   ['Pending Approval', orderedServiceStatus.filter((row) => row.lifecycle_state === 'pending approval').length, 'Approval workflow in progress'],
@@ -441,8 +524,6 @@ document.getElementById('healthMetrics').innerHTML = [
 ]
   .map(([label, value, hint]) => `<article class="mini-card"><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
   .join('');
-
-document.getElementById('serviceHealthTables').innerHTML = renderServiceStatusTable(orderedServiceStatus);
 
 document.getElementById('healthTiles').innerHTML = [
   ...state.vmHealth,
@@ -453,11 +534,8 @@ document.getElementById('healthTiles').innerHTML = [
     detail: `${service.lifecycle_state} · starts ${service.start_date}`
   }))
 ]
-  .map(
-    (item) => `<article class="health-tile ${healthClass(item.health)}"><p>${item.type}</p><h4>${item.name}</h4><span>${item.health}</span><small>${item.detail}</small></article>`
-  )
+  .map((item) => `<article class="health-tile ${healthClass(item.health)}"><p>${item.type}</p><h4>${item.name}</h4><span>${item.health}</span><small>${item.detail}</small></article>`)
   .join('');
-
 
 const catalogIcons = {
   'RHEL App Stack': '🖥️',
@@ -470,7 +548,7 @@ document.getElementById('catalogGrid').innerHTML = state.catalogs
   .map(
     (catalog) => `
   <article class="catalog-card">
-    <h4><span class="catalog-icon">${catalogIcons[catalog.name] || "📦"}</span>${catalog.name}</h4>
+    <h4><span class="catalog-icon">${catalogIcons[catalog.name] || '📦'}</span>${catalog.name}</h4>
     <p>${catalog.description}</p>
     <div class="catalog-footer">
       <span>Template</span>
@@ -479,6 +557,46 @@ document.getElementById('catalogGrid').innerHTML = state.catalogs
   </article>`
   )
   .join('');
+
+renderAssetsTable();
+
+document.addEventListener('click', async (event) => {
+  const target = event.target;
+  if (target.matches('[data-reorder]')) {
+    const catalogName = target.dataset.reorder;
+    const catalog = state.catalogs.find((item) => item.name === catalogName);
+    if (!catalog) return;
+    showSection('marketplace');
+    document.querySelector(`[data-order="${catalog.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  }
+  if (target.matches('[data-action]')) {
+    const action = target.dataset.action;
+    const serviceName = target.dataset.service;
+    alert(action === 'logs' ? `Opening logs for ${serviceName}` : `Opening service details for ${serviceName}`);
+  }
+  if (target.matches('[data-sort]')) {
+    const key = target.dataset.sort;
+    if (assetSort.key === key) {
+      assetSort.direction = assetSort.direction === 'asc' ? 'desc' : 'asc';
+    } else {
+      assetSort.key = key;
+      assetSort.direction = 'asc';
+    }
+    renderAssetsTable();
+  }
+  if (target.matches('[data-edit-tags]')) {
+    const serviceId = Number(target.dataset.editTags);
+    const asset = state.assets.find((item) => item.service_id === serviceId);
+    const nextTags = prompt('Enter comma-separated tags', asset?.tags || '');
+    if (nextTags === null) return;
+    const response = await updateServiceTags(serviceId, nextTags);
+    if (response.ok && asset) {
+      asset.tags = nextTags;
+      renderAssetsTable();
+      alert(`Tags updated for service ${serviceId}`);
+    }
+  }
+});
 
 document.querySelectorAll('[data-order]').forEach((button) => {
   button.addEventListener('click', () => {
@@ -506,23 +624,6 @@ document.querySelectorAll('[data-order]').forEach((button) => {
     `;
     panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
   });
-});
-
-document.addEventListener('click', (event) => {
-  const target = event.target;
-  if (target.matches('[data-reorder]')) {
-    const catalogName = target.dataset.reorder;
-    const catalog = state.catalogs.find((item) => item.name === catalogName);
-    if (!catalog) return;
-    showSection('marketplace');
-    document.querySelector(`[data-order="${catalog.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
-  }
-  if (target.matches('[data-action]')) {
-    const action = target.dataset.action;
-    const serviceName = target.dataset.service;
-    const message = action === 'logs' ? `Opening logs for ${serviceName}` : `Opening service details for ${serviceName}`;
-    alert(message);
-  }
 });
 
 document.getElementById('globalSearch').addEventListener('input', () => renderSearchResults(orderedServiceStatus));
