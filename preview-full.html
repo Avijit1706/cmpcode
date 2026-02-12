@@ -1,0 +1,782 @@
+<!doctype html>
+<html lang="en" data-theme="dark">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>ManageIQ Portal Preview</title>
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <style>
+:root {
+  font-family: Inter, system-ui, sans-serif;
+  color-scheme: light;
+}
+
+* { box-sizing: border-box; }
+body { margin: 0; background: #f3f8ff; color: #0f172a; }
+[data-theme='dark'] body { background: #050b16; color: #e2e8f0; }
+
+.app-shell { min-height: 100vh; display: flex; }
+.sidebar {
+  width: 260px;
+  background: linear-gradient(180deg, #0a1735, #081127);
+  color: #dbeafe;
+  padding: 1rem;
+  border-right: 1px solid rgba(59, 130, 246, 0.25);
+  position: sticky;
+  top: 0;
+  height: 100vh;
+}
+[data-theme='light'] .sidebar {
+  background: linear-gradient(180deg, #dbeafe, #eff6ff);
+  color: #1e3a8a;
+  border-right: 1px solid #bfdbfe;
+}
+.sidebar-head { display: flex; justify-content: space-between; align-items: center; margin-bottom: 1rem; }
+.sidebar-head p { margin: 0; font-size: 0.72rem; letter-spacing: 0.13em; }
+.sidebar-head h2 { margin: 0.2rem 0 0; font-size: 1.1rem; }
+.nav-item {
+  width: 100%;
+  text-align: left;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  padding: 0.62rem 0.75rem;
+  border-radius: 0.7rem;
+  text-transform: capitalize;
+  cursor: pointer;
+  transition: 0.2s ease;
+}
+.nav-item:hover, .nav-item.active { background: rgba(59, 130, 246, 0.24); }
+
+.content {
+  flex: 1;
+  padding: 1.3rem;
+  background: radial-gradient(circle at 0% 0%, rgba(37, 99, 235, 0.14), transparent 42%);
+}
+.topbar { display: flex; justify-content: space-between; align-items: center; gap: 1rem; margin-bottom: 1rem; }
+.topbar-left { display: flex; align-items: center; gap: 0.7rem; }
+.topbar h1 { margin: 0; font-size: 1.45rem; }
+.topbar p { margin: 0.2rem 0 0; color: #64748b; }
+[data-theme='dark'] .topbar p { color: #93c5fd; }
+.topbar-right { display: flex; gap: 0.6rem; }
+
+.btn {
+  border-radius: 0.65rem;
+  border: 1px solid transparent;
+  padding: 0.48rem 0.8rem;
+  font-weight: 600;
+  cursor: pointer;
+}
+.btn.primary {
+  background: linear-gradient(120deg, #2563eb, #1d4ed8);
+  color: white;
+  box-shadow: 0 10px 20px rgba(37, 99, 235, 0.2);
+}
+.btn.muted { background: transparent; border-color: rgba(100, 116, 139, 0.45); color: inherit; }
+
+.view-stack { display: grid; gap: 1rem; }
+.card-strip,
+.mini-kpi-grid {
+  display: grid;
+  grid-template-columns: repeat(7, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.mini-card {
+  border-radius: 0.85rem;
+  border: 1px solid #bfdbfe;
+  background: linear-gradient(150deg, rgba(255, 255, 255, 0.96), rgba(219, 234, 254, 0.88));
+  padding: 0.75rem;
+  min-height: 94px;
+}
+[data-theme='dark'] .mini-card {
+  border-color: rgba(96, 165, 250, 0.34);
+  background: linear-gradient(150deg, rgba(11, 25, 52, 0.9), rgba(15, 23, 42, 0.88));
+}
+.mini-card p { margin: 0; font-size: 0.72rem; letter-spacing: 0.04em; text-transform: uppercase; color: #64748b; }
+.mini-card h4 { margin: 0.4rem 0 0.2rem; font-size: 1.25rem; color: #1d4ed8; }
+.mini-card small { color: #64748b; font-size: 0.72rem; }
+
+.panel,
+.catalog-card,
+.catalog-chip {
+  border-radius: 1rem;
+  border: 1px solid #bfdbfe;
+  background: rgba(255, 255, 255, 0.95);
+  box-shadow: 0 10px 28px rgba(15, 23, 42, 0.08);
+}
+[data-theme='dark'] .panel,
+[data-theme='dark'] .catalog-card,
+[data-theme='dark'] .catalog-chip {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(9, 18, 38, 0.92);
+}
+.panel { padding: 1rem; }
+.panel.compact { padding: 0.8rem; }
+.panel-head { display: flex; align-items: center; justify-content: space-between; margin-bottom: 0.5rem; }
+.panel h3 { margin: 0 0 0.45rem; }
+
+.quick-links { display: flex; flex-wrap: wrap; gap: 0.6rem; }
+.quick-links a {
+  text-decoration: none;
+  color: #1d4ed8;
+  font-weight: 600;
+  border: 1px solid #bfdbfe;
+  border-radius: 999px;
+  padding: 0.36rem 0.72rem;
+  background: #eff6ff;
+}
+[data-theme='dark'] .quick-links a { background: rgba(30, 58, 138, 0.25); border-color: rgba(96, 165, 250, 0.34); color: #93c5fd; }
+
+.catalog-grid { display: grid; grid-template-columns: repeat(4, minmax(0, 1fr)); gap: 0.7rem; }
+.catalog-grid.small { grid-template-columns: repeat(3, minmax(0, 1fr)); }
+.catalog-card { padding: 0.8rem; }
+.catalog-card h4 { margin: 0; color: #1d4ed8; font-size: 0.98rem; }
+.catalog-card p { margin: 0.35rem 0; font-size: 0.82rem; color: #64748b; min-height: 38px; }
+.catalog-footer { display: flex; justify-content: space-between; align-items: center; margin-top: 0.45rem; }
+.catalog-footer span { font-size: 0.72rem; color: #64748b; }
+
+.catalog-chip {
+  padding: 0.75rem;
+  display: grid;
+  gap: 0.28rem;
+}
+.catalog-chip strong { font-size: 0.9rem; }
+.catalog-chip span { font-size: 0.76rem; color: #64748b; }
+.catalog-chip a { font-size: 0.78rem; color: #2563eb; text-decoration: none; font-weight: 600; }
+
+.dialog-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.65rem; }
+.dialog-grid label { display: grid; gap: 0.25rem; font-size: 0.85rem; }
+.dialog-grid input,
+.dialog-grid select,
+.dialog-grid textarea {
+  border: 1px solid #bfdbfe;
+  border-radius: 0.6rem;
+  padding: 0.43rem;
+  background: transparent;
+  color: inherit;
+}
+
+.grid.two-col { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.8rem; }
+.table-wrap { overflow-x: auto; }
+table { width: 100%; border-collapse: collapse; }
+th,
+td { text-align: left; padding: 0.45rem; border-bottom: 1px solid rgba(148, 163, 184, 0.3); font-size: 0.82rem; }
+
+.profile-grid { display: grid; grid-template-columns: repeat(2, minmax(0, 1fr)); gap: 0.7rem; }
+.profile-grid div { border: 1px solid #bfdbfe; border-radius: 0.7rem; padding: 0.62rem; }
+[data-theme='dark'] .profile-grid div { border-color: rgba(96, 165, 250, 0.28); }
+.profile-grid span { font-size: 0.72rem; color: #64748b; display: block; }
+
+.mobile-only { display: none; }
+
+@media (max-width: 1280px) {
+  .card-strip,
+  .mini-kpi-grid { grid-template-columns: repeat(4, minmax(0, 1fr)); }
+  .catalog-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) {
+  .sidebar { position: fixed; left: 0; transform: translateX(-100%); z-index: 20; }
+  .sidebar.open { transform: translateX(0); }
+  .mobile-only { display: inline-flex; }
+  .card-strip,
+  .mini-kpi-grid,
+  .catalog-grid,
+  .catalog-grid.small,
+  .grid.two-col,
+  .dialog-grid,
+  .profile-grid { grid-template-columns: 1fr; }
+}
+
+.status-badge {
+  display: inline-flex;
+  align-items: center;
+  border-radius: 999px;
+  padding: 0.15rem 0.5rem;
+  font-size: 0.72rem;
+  font-weight: 700;
+  text-transform: capitalize;
+}
+.status-badge.active { background: rgba(22, 163, 74, 0.18); color: #16a34a; }
+.status-badge.warning { background: rgba(245, 158, 11, 0.2); color: #d97706; }
+.status-badge.retired { background: rgba(148, 163, 184, 0.25); color: #475569; }
+[data-theme="dark"] .status-badge.active { background: rgba(34, 197, 94, 0.18); color: #4ade80; }
+[data-theme="dark"] .status-badge.warning { background: rgba(245, 158, 11, 0.2); color: #fbbf24; }
+[data-theme="dark"] .status-badge.retired { background: rgba(100, 116, 139, 0.3); color: #cbd5e1; }
+
+
+.profile-chip {
+  border: 1px solid #bfdbfe;
+  border-radius: 0.75rem;
+  padding: 0.4rem 0.65rem;
+  display: grid;
+  background: rgba(255, 255, 255, 0.85);
+  line-height: 1.2;
+}
+.profile-chip span { font-size: 0.75rem; color: #64748b; }
+[data-theme='dark'] .profile-chip {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(9, 18, 38, 0.82);
+}
+
+.trend-list {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+  display: grid;
+  gap: 0.55rem;
+}
+.trend-list li {
+  border: 1px solid #bfdbfe;
+  border-radius: 0.8rem;
+  padding: 0.55rem;
+  display: grid;
+  gap: 0.2rem;
+  background: rgba(239, 246, 255, 0.7);
+}
+[data-theme='dark'] .trend-list li {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(15, 23, 42, 0.7);
+}
+.trend-list li span,
+.trend-list li small { color: #64748b; font-size: 0.78rem; }
+
+.ticket-summary {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.6rem;
+  margin-bottom: 0.8rem;
+}
+.ticket-list {
+  grid-column: 1 / -1;
+  border: 1px solid #bfdbfe;
+  border-radius: 0.8rem;
+  padding: 0.55rem;
+  display: grid;
+  gap: 0.45rem;
+}
+.ticket-list div { display: grid; gap: 0.1rem; }
+.ticket-list span { font-size: 0.75rem; color: #2563eb; font-weight: 700; }
+.ticket-list small { color: #64748b; font-size: 0.75rem; }
+[data-theme='dark'] .ticket-list { border-color: rgba(96, 165, 250, 0.28); }
+
+.ticket-form { display: grid; gap: 0.55rem; margin-bottom: 0.75rem; }
+.ticket-form label { display: grid; gap: 0.2rem; font-size: 0.82rem; }
+.ticket-form input,
+.ticket-form textarea {
+  border: 1px solid #bfdbfe;
+  border-radius: 0.6rem;
+  padding: 0.43rem;
+  background: transparent;
+  color: inherit;
+}
+.support-ways p { margin: 0.2rem 0; }
+.support-ways ul { margin: 0.3rem 0 0 1.1rem; padding: 0; color: #64748b; }
+
+@media (max-width: 1024px) {
+  .ticket-summary { grid-template-columns: 1fr; }
+}
+
+.health-tile-grid {
+  display: grid;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 0.7rem;
+}
+
+.health-tile {
+  border-radius: 0.9rem;
+  border: 1px solid #bfdbfe;
+  padding: 0.7rem;
+  background: rgba(255, 255, 255, 0.92);
+  display: grid;
+  gap: 0.25rem;
+}
+.health-tile p { margin: 0; font-size: 0.72rem; text-transform: uppercase; color: #64748b; }
+.health-tile h4 { margin: 0; font-size: 0.92rem; }
+.health-tile span { font-weight: 700; text-transform: capitalize; }
+.health-tile small { color: #64748b; font-size: 0.72rem; }
+
+.health-tile.ok { border-color: rgba(34, 197, 94, 0.5); box-shadow: inset 0 0 0 1px rgba(34, 197, 94, 0.18); }
+.health-tile.ok span { color: #16a34a; }
+.health-tile.warn { border-color: rgba(245, 158, 11, 0.55); box-shadow: inset 0 0 0 1px rgba(245, 158, 11, 0.18); }
+.health-tile.warn span { color: #d97706; }
+.health-tile.down { border-color: rgba(239, 68, 68, 0.55); box-shadow: inset 0 0 0 1px rgba(239, 68, 68, 0.22); }
+.health-tile.down span { color: #dc2626; }
+
+[data-theme='dark'] .health-tile { background: rgba(9, 18, 38, 0.85); border-color: rgba(96, 165, 250, 0.28); }
+[data-theme='dark'] .health-tile.ok span { color: #4ade80; }
+[data-theme='dark'] .health-tile.warn span { color: #fbbf24; }
+[data-theme='dark'] .health-tile.down span { color: #f87171; }
+
+.support-ways a { color: #2563eb; font-weight: 600; text-decoration: none; }
+[data-theme='dark'] .support-ways a { color: #93c5fd; }
+
+@media (max-width: 1280px) {
+  .health-tile-grid { grid-template-columns: repeat(2, minmax(0, 1fr)); }
+}
+
+@media (max-width: 1024px) {
+  .health-tile-grid { grid-template-columns: 1fr; }
+}
+
+</style>
+  </head>
+  <body>
+    <div id="root"></div>
+    <script>
+const state = {
+  catalogs: [
+    { id: 1, name: 'RHEL App Stack', description: 'Deploy hardened RHEL app stack', dialogId: 'vm-request', used: 32 },
+    { id: 2, name: 'PostgreSQL HA', description: 'Provision DB with replication', dialogId: 'db-request', used: 21 },
+    { id: 3, name: 'Kubernetes Namespace', description: 'Namespace with quotas and baseline policies', dialogId: 'k8s-request', used: 28 },
+    { id: 4, name: 'Windows Build Agent', description: 'Provision build workers for enterprise CI', dialogId: 'vm-request', used: 15 }
+  ],
+  dialogs: {
+    'vm-request': [
+      { type: 'text', label: 'Application Name' },
+      { type: 'select', label: 'Environment', options: ['Dev', 'Stage', 'Prod'] },
+      { type: 'number', label: 'vCPU' },
+      { type: 'textarea', label: 'Notes' }
+    ],
+    'db-request': [
+      { type: 'text', label: 'DB Name' },
+      { type: 'select', label: 'Engine', options: ['Postgres', 'MySQL', 'MSSQL'] }
+    ],
+    'k8s-request': [{ type: 'text', label: 'Namespace' }]
+  },
+  services: [
+    {
+      id: 201,
+      name: 'payments-service',
+      lifecycle_state: 'provisioned',
+      start_date: '2026-01-10',
+      retirement_date: '2027-01-10',
+      retirement_state: 'active',
+      created_on: '2026-01-10'
+    },
+    {
+      id: 202,
+      name: 'etl-batch',
+      lifecycle_state: 'pending approval',
+      start_date: '2026-02-20',
+      retirement_date: '2026-05-01',
+      retirement_state: 'about to retire',
+      created_on: '2026-01-06'
+    },
+    {
+      id: 203,
+      name: 'audit-stream',
+      lifecycle_state: 'unprovisioned',
+      start_date: '2025-01-16',
+      retirement_date: '2026-01-30',
+      retirement_state: 'retired',
+      created_on: '2026-01-16'
+    },
+    {
+      id: 204,
+      name: 'sso-gateway',
+      lifecycle_state: 'provisioned',
+      start_date: '2026-02-01',
+      retirement_date: '2026-04-15',
+      retirement_state: 'about to retire',
+      created_on: '2026-02-01'
+    }
+  ],
+
+  vmHealth: [
+    { name: 'api-prod-01', type: 'VM', health: 'available', detail: 'CPU 41%, Memory 66%' },
+    { name: 'etl-worker-02', type: 'VM', health: 'degraded', detail: 'High CPU contention' },
+    { name: 'legacy-batch-01', type: 'VM', health: 'unavailable', detail: 'Host unreachable' }
+  ],
+  serviceRequests: [
+    {
+      request_id: 'REQ-9031',
+      service_order_id: 'SO-1101',
+      requester: 'alex.morgan',
+      request_status: 'finished',
+      request_details: 'Provision payments service for prod namespace',
+      approval_pending_with: null,
+      requested_on: '2026-02-10'
+    },
+    {
+      request_id: 'REQ-9032',
+      service_order_id: 'SO-1102',
+      requester: 'alex.morgan',
+      request_status: 'pending',
+      request_details: 'Create ETL batch service for finance workloads',
+      approval_pending_with: 'jane.approver',
+      requested_on: '2026-02-11'
+    },
+    {
+      request_id: 'REQ-9033',
+      service_order_id: 'SO-1103',
+      requester: 'alex.morgan',
+      request_status: 'queued',
+      request_details: 'Deploy audit stream service with retention policy',
+      approval_pending_with: null,
+      requested_on: '2026-02-06'
+    },
+    {
+      request_id: 'REQ-9034',
+      service_order_id: 'SO-1104',
+      requester: 'alex.morgan',
+      request_status: 'finished',
+      request_details: 'Provision SSO gateway for edge identity',
+      approval_pending_with: null,
+      requested_on: '2026-02-09'
+    }
+  ],
+  serviceOrders: [
+    { id: 'SO-1101', service_id: 201, catalog_id: 1, ordered_on: '2026-02-10' },
+    { id: 'SO-1102', service_id: 202, catalog_id: 2, ordered_on: '2026-02-11' },
+    { id: 'SO-1103', service_id: 203, catalog_id: 3, ordered_on: '2026-02-06' },
+    { id: 'SO-1104', service_id: 204, catalog_id: 4, ordered_on: '2026-02-09' }
+  ],
+  supportTickets: [
+    { id: 'SUP-7201', title: 'Need firewall egress rule', status: 'In Progress', created_on: '2026-02-10', channel: 'Portal' },
+    { id: 'SUP-7190', title: 'Catalog order timeout', status: 'Resolved', created_on: '2026-02-04', channel: 'Email' }
+  ],
+  profile: { username: 'alex.morgan', name: 'Alex Morgan', email: 'alex.morgan@example.com', role: 'Platform Engineer' }
+};
+
+const root = document.getElementById('root');
+
+root.innerHTML = `
+  <div class="app-shell">
+    <aside class="sidebar" id="sidebar">
+      <div class="sidebar-head">
+        <div><p>OPS SUITE</p><h2>Cloud Portal</h2></div>
+        <button class="btn muted mobile-only" id="closeSidebar">✕</button>
+      </div>
+      <nav>
+        <button class="nav-item active" data-section="dashboard">dashboard</button>
+        <button class="nav-item" data-section="request-status">request status</button>
+        <button class="nav-item" data-section="your-services">your services</button>
+        <button class="nav-item" data-section="marketplace">marketplace</button>
+      </nav>
+    </aside>
+    <main class="content">
+      <header class="topbar">
+        <div class="topbar-left">
+          <button class="btn muted mobile-only" id="openSidebar">☰</button>
+          <div><h1>Enterprise Service Portal</h1><p>Service lifecycle, requests, and support in one place</p></div>
+        </div>
+        <div class="topbar-right">
+          <button class="btn muted" id="toggleTheme">Toggle Theme</button>
+          <div class="profile-chip"><strong>${state.profile.name}</strong><span>${state.profile.role}</span></div>
+        </div>
+      </header>
+
+      <section data-view="dashboard" class="view-stack">
+        <div class="card-strip" id="dashboardMetrics"></div>
+        <div class="grid two-col">
+          <div class="panel">
+            <div class="panel-head"><h3>Trending Requests (Last 7 Days)</h3></div>
+            <div id="trendingRequests"></div>
+          </div>
+          <div class="panel">
+            <div class="panel-head"><h3>Support Tickets</h3></div>
+            <div id="ticketSummary" class="ticket-summary"></div>
+            <form id="ticketForm" class="ticket-form">
+              <label><span>Raise a ticket</span><input id="ticketTitle" type="text" placeholder="Brief issue summary" required /></label>
+              <label><span>Description</span><textarea id="ticketDetails" placeholder="What do you need help with?" required></textarea></label>
+              <button class="btn primary" type="submit">Submit Ticket</button>
+            </form>
+            <div class="support-ways">
+              <p><strong>Ways to reach support</strong></p>
+              <ul>
+                <li><a href="https://support.example.com" target="_blank" rel="noopener noreferrer">Open Ticketing Tool</a></li>
+                <li>Portal Ticketing (preferred)</li>
+                <li>Email: support@example.com</li>
+                <li>ChatOps: #platform-support</li>
+              </ul>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <section data-view="request-status" style="display:none" class="view-stack">
+        <div class="panel compact">
+          <h3>Request Status Data Sources</h3>
+          <p>Request table API: <strong>/api/requests</strong> · Service order API: <strong>/api/service_orders</strong> · Service table API: <strong>/api/services</strong></p>
+        </div>
+        <div class="grid two-col" id="requestTables"></div>
+      </section>
+
+      <section data-view="your-services" style="display:none" class="view-stack">
+        <div class="panel compact">
+          <h3>Service Health Data Source</h3>
+          <p>Lifecycle state, start date, and retirement dates are sourced from <strong>/api/services</strong>.</p>
+        </div>
+        <div class="card-strip" id="healthMetrics"></div>
+        <div class="health-tile-grid" id="healthTiles"></div>
+        <div class="grid two-col" id="serviceHealthTables"></div>
+      </section>
+
+      <section data-view="marketplace" style="display:none" class="view-stack">
+        <div class="panel"><div class="panel-head"><h3>Marketplace</h3></div><div class="catalog-grid" id="catalogGrid"></div></div>
+        <div class="panel" id="dialogPanel" style="display:none"></div>
+      </section>
+    </main>
+  </div>
+`;
+
+function setTheme(next) {
+  document.documentElement.setAttribute('data-theme', next);
+  localStorage.setItem('portal-theme', next);
+}
+setTheme(localStorage.getItem('portal-theme') || 'dark');
+document.getElementById('toggleTheme').addEventListener('click', () => {
+  const cur = document.documentElement.getAttribute('data-theme');
+  setTheme(cur === 'dark' ? 'light' : 'dark');
+});
+
+function showSection(section) {
+  document.querySelectorAll('.nav-item').forEach((b) => b.classList.toggle('active', b.dataset.section === section));
+  document.querySelectorAll('[data-view]').forEach((view) => {
+    view.style.display = view.dataset.view === section ? 'block' : 'none';
+  });
+  document.getElementById('sidebar').classList.remove('open');
+}
+
+document.getElementById('openSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.add('open'));
+document.getElementById('closeSidebar').addEventListener('click', () => document.getElementById('sidebar').classList.remove('open'));
+document.querySelectorAll('.nav-item').forEach((btn) => btn.addEventListener('click', () => showSection(btn.dataset.section)));
+
+function table(title, rows, cols) {
+  return `
+    <div class="panel compact">
+      <h3>${title}</h3>
+      <div class="table-wrap"><table><thead><tr>${cols.map((c) => `<th>${c}</th>`).join('')}</tr></thead>
+      <tbody>${rows.map((r) => `<tr>${cols.map((c) => `<td>${r[c] ?? '-'}</td>`).join('')}</tr>`).join('')}</tbody></table></div>
+    </div>`;
+}
+
+function serviceRetirementBadge(retirementState) {
+  if (retirementState === 'active') return '<span class="status-badge active">● active</span>';
+  if (retirementState === 'about to retire') return '<span class="status-badge warning">● about to retire</span>';
+  return '<span class="status-badge retired">● retired</span>';
+}
+
+function renderOrderStatusRows() {
+  return state.serviceRequests.map((request) => {
+    const order = state.serviceOrders.find((serviceOrder) => serviceOrder.id === request.service_order_id) || {};
+    const service = state.services.find((svc) => svc.id === order.service_id) || {};
+    const catalog = state.catalogs.find((item) => item.id === order.catalog_id) || {};
+    const lifecycleState = service.lifecycle_state || '-';
+    return {
+      request_id: request.request_id,
+      order_id: order.id || '-',
+      service_name: service.name || '-',
+      request_status: request.request_status || '-',
+      lifecycle_state: lifecycleState,
+      approval_pending_with: lifecycleState === 'pending approval' ? request.approval_pending_with || '-' : '-',
+      request_details: request.request_details || '-',
+      catalog: catalog.name || '-',
+      ordered_on: order.ordered_on || '-',
+      requested_on: request.requested_on || '-',
+      start_date: service.start_date || '-',
+      retirement_date: service.retirement_date || '-',
+      retirement_state: service.retirement_state || 'retired'
+    };
+  });
+}
+
+function renderOrdersTable(rows) {
+  return `
+    <div class="panel compact">
+      <h3>Order Status</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>order_id</th><th>catalog</th><th>service_name</th><th>ordered_on</th><th>re-order</th></tr></thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `<tr>
+                <td>${row.order_id}</td>
+                <td>${row.catalog}</td>
+                <td>${row.service_name}</td>
+                <td>${row.ordered_on}</td>
+                <td><button class="btn primary" data-reorder="${row.catalog}">Re-order</button></td>
+              </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+function renderServiceStatusTable(rows) {
+  return `
+    <div class="panel compact">
+      <h3>Service Status</h3>
+      <div class="table-wrap"><table>
+        <thead><tr><th>service_name</th><th>lifecycle_state</th><th>start_date</th><th>retirement_date</th><th>retirement_status</th><th>approval_pending_with</th></tr></thead>
+        <tbody>
+          ${rows
+            .map(
+              (row) => `<tr>
+                <td>${row.service_name}</td>
+                <td>${row.lifecycle_state}</td>
+                <td>${row.start_date}</td>
+                <td>${row.retirement_date}</td>
+                <td>${serviceRetirementBadge(row.retirement_state)}</td>
+                <td>${row.approval_pending_with}</td>
+              </tr>`
+            )
+            .join('')}
+        </tbody>
+      </table></div>
+    </div>`;
+}
+
+const orderedServiceStatus = renderOrderStatusRows();
+
+const dashboardCards = [
+  ['Active Services', orderedServiceStatus.filter((row) => row.retirement_state === 'active').length, 'Operational services'],
+  ['Expiring Services (≤ 3 months)', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal planning'],
+  ['Retired Services', orderedServiceStatus.filter((row) => row.retirement_state === 'retired').length, 'Already retired'],
+  ['My Support Tickets', state.supportTickets.length, 'Open and resolved tickets']
+];
+
+document.getElementById('dashboardMetrics').innerHTML = dashboardCards
+  .map(([label, value, hint]) => `<article class="mini-card"><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
+  .join('');
+
+const trendingRequests = [...orderedServiceStatus]
+  .filter((row) => {
+    const requested = new Date(row.requested_on);
+    const now = new Date('2026-02-12');
+    return (now - requested) / (1000 * 60 * 60 * 24) <= 7;
+  })
+  .sort((a, b) => b.requested_on.localeCompare(a.requested_on));
+
+document.getElementById('trendingRequests').innerHTML =
+  trendingRequests.length === 0
+    ? '<p>No trending requests in the last 7 days.</p>'
+    : `<ul class="trend-list">${trendingRequests
+        .map(
+          (item) => `<li><strong>${item.service_name}</strong><span>${item.requested_on}</span><small>${item.request_status} · ${item.request_details}</small></li>`
+        )
+        .join('')}</ul>`;
+
+function renderTicketSummary() {
+  const openCount = state.supportTickets.filter((ticket) => ticket.status !== 'Resolved').length;
+  document.getElementById('ticketSummary').innerHTML = `
+    <article class="mini-card"><p>Open Tickets</p><h4>${openCount}</h4><small>Needs action</small></article>
+    <article class="mini-card"><p>Resolved Tickets</p><h4>${state.supportTickets.length - openCount}</h4><small>Closed successfully</small></article>
+    <div class="ticket-list">${state.supportTickets
+      .map((ticket) => `<div><strong>${ticket.id}</strong><span>${ticket.status}</span><small>${ticket.title}</small></div>`)
+      .join('')}</div>
+  `;
+}
+renderTicketSummary();
+
+document.getElementById('ticketForm').addEventListener('submit', (event) => {
+  event.preventDefault();
+  const title = document.getElementById('ticketTitle').value.trim();
+  const details = document.getElementById('ticketDetails').value.trim();
+  if (!title || !details) return;
+  const newId = `SUP-${7202 + state.supportTickets.length}`;
+  state.supportTickets.unshift({ id: newId, title, status: 'New', created_on: '2026-02-12', channel: 'Portal' });
+  renderTicketSummary();
+  event.target.reset();
+});
+
+document.getElementById('requestTables').innerHTML = [
+  table('Request Status', orderedServiceStatus, ['request_id', 'order_id', 'request_status', 'request_details', 'approval_pending_with']),
+  renderOrdersTable(orderedServiceStatus)
+].join('');
+
+document.getElementById('healthMetrics').innerHTML = [
+  ['Provisioned', orderedServiceStatus.filter((row) => row.lifecycle_state === 'provisioned').length, 'Running ordered services'],
+  ['Pending Approval', orderedServiceStatus.filter((row) => row.lifecycle_state === 'pending approval').length, 'Approval workflow in progress'],
+  ['Unprovisioned', orderedServiceStatus.filter((row) => row.lifecycle_state === 'unprovisioned').length, 'Not yet provisioned'],
+  ['About to Retire', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal decision']
+]
+  .map(([label, value, hint]) => `<article class="mini-card"><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
+  .join('');
+
+document.getElementById('serviceHealthTables').innerHTML = [
+  renderServiceStatusTable(orderedServiceStatus),
+  table('Service Lifecycle Snapshot', orderedServiceStatus, ['service_name', 'start_date', 'retirement_date', 'lifecycle_state'])
+].join('');
+
+
+function healthClass(status) {
+  if (status === 'available') return 'ok';
+  if (status === 'degraded') return 'warn';
+  return 'down';
+}
+
+document.getElementById('healthTiles').innerHTML = [
+  ...state.vmHealth,
+  ...orderedServiceStatus.map((service) => ({
+    name: service.service_name,
+    type: 'Service',
+    health: service.lifecycle_state === 'provisioned' ? 'available' : service.lifecycle_state === 'pending approval' ? 'degraded' : 'unavailable',
+    detail: `${service.lifecycle_state} · starts ${service.start_date}`
+  }))
+]
+  .map(
+    (item) => `<article class="health-tile ${healthClass(item.health)}"><p>${item.type}</p><h4>${item.name}</h4><span>${item.health}</span><small>${item.detail}</small></article>`
+  )
+  .join('');
+
+document.getElementById('catalogGrid').innerHTML = state.catalogs
+  .map(
+    (catalog) => `
+  <article class="catalog-card">
+    <h4>${catalog.name}</h4>
+    <p>${catalog.description}</p>
+    <div class="catalog-footer">
+      <span>Template</span>
+      <button class="btn primary" data-order="${catalog.id}">Order Service</button>
+    </div>
+  </article>`
+  )
+  .join('');
+
+document.querySelectorAll('[data-order]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const id = Number(button.dataset.order);
+    const catalog = state.catalogs.find((c) => c.id === id);
+    const fields = state.dialogs[catalog.dialogId] || [];
+    const panel = document.getElementById('dialogPanel');
+    panel.style.display = 'block';
+    panel.innerHTML = `
+      <div class="panel-head"><h3>${catalog.name} - Service Dialog</h3></div>
+      <div class="dialog-grid">
+        ${fields
+          .map((field) => {
+            if (field.type === 'select') {
+              return `<label><span>${field.label}</span><select>${field.options.map((o) => `<option>${o}</option>`).join('')}</select></label>`;
+            }
+            if (field.type === 'textarea') {
+              return `<label><span>${field.label}</span><textarea></textarea></label>`;
+            }
+            return `<label><span>${field.label}</span><input type="${field.type}" /></label>`;
+          })
+          .join('')}
+      </div>
+      <div style="margin-top:.75rem"><button class="btn primary">Submit Request</button></div>
+    `;
+    panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  });
+});
+
+document.querySelectorAll('[data-reorder]').forEach((button) => {
+  button.addEventListener('click', () => {
+    const catalogName = button.dataset.reorder;
+    const catalog = state.catalogs.find((item) => item.name === catalogName);
+    if (!catalog) return;
+    showSection('marketplace');
+    document.querySelector(`[data-order="${catalog.id}"]`)?.scrollIntoView({ behavior: 'smooth', block: 'center' });
+  });
+});
+
+</script>
+  </body>
+</html>
