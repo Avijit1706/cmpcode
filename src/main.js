@@ -18,6 +18,13 @@ const state = {
     ],
     'k8s-request': [{ type: 'text', label: 'Namespace' }]
   },
+
+  catalogIconPrefs: {
+    'RHEL App Stack': '🖥️',
+    'PostgreSQL HA': '🗄️',
+    'Kubernetes Namespace': '☸️',
+    'Windows Build Agent': '🛠️'
+  },
   services: [
     {
       id: 201,
@@ -251,24 +258,10 @@ root.innerHTML = `
           <div class="panel-head"><h3>Marketplace</h3></div>
           <div class="catalog-grid" id="catalogGrid"></div>
         </div>
-        <div class="panel marketplace-builder">
-          <div class="panel-head"><h3>Create Catalog Item (Drag & Drop)</h3></div>
-          <p>Drag capability blocks into the canvas, then save as a new marketplace catalog item.</p>
-          <div class="builder-layout">
-            <div class="builder-palette" id="builderPalette">
-              <button class="builder-chip" draggable="true" data-capability="compute">🖥️ Compute</button>
-              <button class="builder-chip" draggable="true" data-capability="database">🗄️ Database</button>
-              <button class="builder-chip" draggable="true" data-capability="network">🌐 Network</button>
-              <button class="builder-chip" draggable="true" data-capability="security">🔐 Security</button>
-              <button class="builder-chip" draggable="true" data-capability="automation">⚙️ Automation</button>
-            </div>
-            <div class="builder-canvas" id="builderCanvas">Drop capability blocks here</div>
-          </div>
-          <form id="builderForm" class="ticket-form">
-            <label><span>Catalog Name</span><input id="builderName" type="text" placeholder="Example: Secure App Blueprint" required /></label>
-            <label><span>Description</span><textarea id="builderDescription" placeholder="Describe the catalog item" required></textarea></label>
-            <button class="btn primary" type="submit">Add to Marketplace</button>
-          </form>
+        <div class="panel marketplace-icons-panel">
+          <div class="panel-head"><h3>Arrange Marketplace Icons</h3></div>
+          <p>Catalog items are created in ManageIQ. Use this panel to choose which icon each catalog should use in this portal view.</p>
+          <div id="iconArrangeGrid" class="icon-arrange-grid"></div>
         </div>
         <div class="panel" id="dialogPanel" style="display:none"></div>
       </section>
@@ -559,12 +552,7 @@ document.getElementById('healthTiles').innerHTML = [
   .map((item) => `<article class="health-tile ${healthClass(item.health)}"><p>${item.type}</p><h4>${item.name}</h4><span>${item.health}</span><small>${item.detail}</small></article>`)
   .join('');
 
-const catalogIcons = {
-  'RHEL App Stack': '🖥️',
-  'PostgreSQL HA': '🗄️',
-  'Kubernetes Namespace': '☸️',
-  'Windows Build Agent': '🛠️'
-};
+const iconChoices = ['🖥️', '🗄️', '☸️', '🛠️', '🔒', '📦', '⚙️', '🌐', '🧠'];
 
 function bindCatalogOrderButtons() {
   document.querySelectorAll('[data-order]').forEach((button) => {
@@ -596,12 +584,24 @@ function bindCatalogOrderButtons() {
   });
 }
 
+function renderIconArrangeGrid() {
+  document.getElementById('iconArrangeGrid').innerHTML = state.catalogs
+    .map(
+      (catalog) => `<label class="icon-arrange-row"><span>${catalog.name}</span>
+        <select data-icon-for="${catalog.name}">
+          ${iconChoices.map((icon) => `<option value="${icon}" ${state.catalogIconPrefs[catalog.name] === icon ? 'selected' : ''}>${icon}</option>`).join('')}
+        </select>
+      </label>`
+    )
+    .join('');
+}
+
 function renderCatalogGrid() {
   document.getElementById('catalogGrid').innerHTML = state.catalogs
     .map(
       (catalog) => `
     <article class="catalog-card">
-      <h4><span class="catalog-icon">${catalogIcons[catalog.name] || '📦'}</span>${catalog.name}</h4>
+      <h4><span class="catalog-icon">${state.catalogIconPrefs[catalog.name] || '📦'}</span>${catalog.name}</h4>
       <p>${catalog.description}</p>
       <div class="catalog-footer">
         <span>Template</span>
@@ -611,64 +611,11 @@ function renderCatalogGrid() {
     )
     .join('');
   bindCatalogOrderButtons();
+  renderIconArrangeGrid();
 }
 
 renderCatalogGrid();
 renderAssetsTable();
-
-const droppedCapabilities = [];
-const capabilityIcons = {
-  compute: '🖥️',
-  database: '🗄️',
-  network: '🌐',
-  security: '🔐',
-  automation: '⚙️'
-};
-
-document.querySelectorAll('.builder-chip').forEach((chip) => {
-  chip.addEventListener('dragstart', (event) => {
-    event.dataTransfer.setData('text/plain', chip.dataset.capability);
-  });
-});
-
-const builderCanvas = document.getElementById('builderCanvas');
-builderCanvas.addEventListener('dragover', (event) => {
-  event.preventDefault();
-  builderCanvas.classList.add('drag-over');
-});
-builderCanvas.addEventListener('dragleave', () => builderCanvas.classList.remove('drag-over'));
-builderCanvas.addEventListener('drop', (event) => {
-  event.preventDefault();
-  builderCanvas.classList.remove('drag-over');
-  const capability = event.dataTransfer.getData('text/plain');
-  if (!capability) return;
-  droppedCapabilities.push(capability);
-  builderCanvas.innerHTML = droppedCapabilities
-    .map((item) => `<span class="capability-pill">${capabilityIcons[item] || '📦'} ${item}</span>`)
-    .join(' ');
-});
-
-document.getElementById('builderForm').addEventListener('submit', (event) => {
-  event.preventDefault();
-  const name = document.getElementById('builderName').value.trim();
-  const description = document.getElementById('builderDescription').value.trim();
-  if (!name || !description) return;
-  const nextId = Math.max(...state.catalogs.map((c) => c.id)) + 1;
-  const capabilitySummary = droppedCapabilities.length ? ` [${droppedCapabilities.join(', ')}]` : '';
-  state.catalogs.unshift({
-    id: nextId,
-    name,
-    description: `${description}${capabilitySummary}`,
-    dialogId: 'vm-request',
-    used: 0
-  });
-  droppedCapabilities.length = 0;
-  builderCanvas.textContent = 'Drop capability blocks here';
-  event.target.reset();
-  renderCatalogGrid();
-  renderSearchResults(orderedServiceStatus);
-});
-
 document.addEventListener('click', async (event) => {
   const target = event.target;
   if (target.matches('[data-reorder]')) {
@@ -709,3 +656,12 @@ document.addEventListener('click', async (event) => {
 
 document.getElementById('globalSearch').addEventListener('input', () => renderSearchResults(orderedServiceStatus));
 renderSearchResults(orderedServiceStatus);
+
+
+document.addEventListener('change', (event) => {
+  const target = event.target;
+  if (target.matches('[data-icon-for]')) {
+    state.catalogIconPrefs[target.dataset.iconFor] = target.value;
+    renderCatalogGrid();
+  }
+});

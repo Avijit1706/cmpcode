@@ -507,75 +507,40 @@ body { background: var(--bg-light); }
   .brand-block { align-items: flex-start; }
 }
 
-.marketplace-builder p {
+
+.marketplace-icons-panel p {
   margin: 0.25rem 0 0.7rem;
   color: #64748b;
   font-size: 0.84rem;
 }
-
-.builder-layout {
+.icon-arrange-grid {
   display: grid;
-  grid-template-columns: 280px 1fr;
-  gap: 0.75rem;
-  margin-bottom: 0.8rem;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 0.55rem;
 }
-.builder-palette {
-  display: grid;
-  gap: 0.45rem;
-}
-.builder-chip {
+.icon-arrange-row {
   border: 1px solid #bfdbfe;
-  border-radius: 0.7rem;
-  padding: 0.45rem 0.6rem;
-  text-align: left;
-  background: rgba(239, 246, 255, 0.75);
-  cursor: grab;
-  color: inherit;
-  font-weight: 600;
-}
-[data-theme='dark'] .builder-chip {
-  border-color: rgba(96, 165, 250, 0.28);
-  background: rgba(15, 23, 42, 0.72);
-}
-
-.builder-canvas {
-  border: 1px dashed #93c5fd;
-  border-radius: 0.8rem;
-  min-height: 104px;
-  padding: 0.6rem;
+  border-radius: 0.75rem;
+  padding: 0.5rem;
   display: flex;
-  flex-wrap: wrap;
-  gap: 0.45rem;
-  align-content: flex-start;
-  color: #64748b;
-}
-.builder-canvas.drag-over {
-  border-color: #2563eb;
-  background: rgba(191, 219, 254, 0.24);
-}
-[data-theme='dark'] .builder-canvas {
-  border-color: rgba(96, 165, 250, 0.4);
-}
-
-.capability-pill {
-  display: inline-flex;
   align-items: center;
-  gap: 0.3rem;
-  border-radius: 999px;
-  padding: 0.3rem 0.58rem;
-  background: rgba(37, 99, 235, 0.12);
-  border: 1px solid rgba(37, 99, 235, 0.25);
-  font-size: 0.78rem;
-  color: #1e3a8a;
+  justify-content: space-between;
+  gap: 0.5rem;
+  font-size: 0.82rem;
+  background: rgba(239, 246, 255, 0.7);
 }
-[data-theme='dark'] .capability-pill {
-  color: #bfdbfe;
-  background: rgba(30, 64, 175, 0.26);
-  border-color: rgba(96, 165, 250, 0.3);
+.icon-arrange-row select {
+  border: 1px solid #bfdbfe;
+  border-radius: 0.55rem;
+  padding: 0.28rem 0.38rem;
+  background: transparent;
+  color: inherit;
+}
+[data-theme='dark'] .icon-arrange-row {
+  border-color: rgba(96, 165, 250, 0.28);
+  background: rgba(15, 23, 42, 0.7);
 }
 
 @media (max-width: 1024px) {
-  .builder-layout {
-    grid-template-columns: 1fr;
-  }
+  .icon-arrange-grid { grid-template-columns: 1fr; }
 }
