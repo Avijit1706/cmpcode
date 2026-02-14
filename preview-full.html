@@ -15,7 +15,7 @@
 
 * { box-sizing: border-box; }
 body { margin: 0; background: #f3f8ff; color: #0f172a; }
-[data-theme='dark'] body { background: #050b16; color: #e2e8f0; }
+[data-theme='dark'] body { background: #0b1220; color: #e2e8f0; }
 
 .app-shell { min-height: 100vh; display: flex; }
 .sidebar {
@@ -110,8 +110,8 @@ body { margin: 0; background: #f3f8ff; color: #0f172a; }
 [data-theme='dark'] .panel,
 [data-theme='dark'] .catalog-card,
 [data-theme='dark'] .catalog-chip {
-  border-color: rgba(96, 165, 250, 0.28);
-  background: rgba(9, 18, 38, 0.92);
+  border-color: rgba(96, 165, 250, 0.3);
+  background: linear-gradient(160deg, rgba(17, 28, 52, 0.92), rgba(13, 22, 43, 0.9));
 }
 .panel { padding: 1rem; }
 .panel.compact { padding: 0.8rem; }
@@ -324,7 +324,7 @@ td { text-align: left; padding: 0.45rem; border-bottom: 1px solid rgba(148, 163,
 
 :root {
   --bg-light: #eef3ff;
-  --bg-dark: #030712;
+  --bg-dark: #0b1220;
   --surface-light: rgba(255, 255, 255, 0.92);
   --surface-dark: rgba(10, 17, 34, 0.9);
 }
@@ -370,19 +370,6 @@ body { background: var(--bg-light); }
   color: #dbeafe;
 }
 
-#searchResults h4 {
-  margin: 0.5rem 0 0.35rem;
-  color: #1d4ed8;
-  font-size: 0.86rem;
-}
-.search-list {
-  margin: 0;
-  padding-left: 1rem;
-  display: grid;
-  gap: 0.22rem;
-}
-.search-list li { color: #475569; font-size: 0.83rem; }
-[data-theme='dark'] .search-list li { color: #cbd5e1; }
 
 .ticketing-link { margin: 0.25rem 0 0; }
 .ticketing-link a {
@@ -518,41 +505,22 @@ body { background: var(--bg-light); }
 }
 
 
-.marketplace-icons-panel p {
-  margin: 0.25rem 0 0.7rem;
-  color: #64748b;
-  font-size: 0.84rem;
-}
-.icon-arrange-grid {
-  display: grid;
-  grid-template-columns: repeat(2, minmax(0, 1fr));
-  gap: 0.55rem;
-}
-.icon-arrange-row {
-  border: 1px solid #bfdbfe;
-  border-radius: 0.75rem;
-  padding: 0.5rem;
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  font-size: 0.82rem;
-  background: rgba(239, 246, 255, 0.7);
-}
-.icon-arrange-row select {
-  border: 1px solid #bfdbfe;
-  border-radius: 0.55rem;
-  padding: 0.28rem 0.38rem;
-  background: transparent;
-  color: inherit;
-}
-[data-theme='dark'] .icon-arrange-row {
-  border-color: rgba(96, 165, 250, 0.28);
-  background: rgba(15, 23, 42, 0.7);
-}
+.panel-wide { width: 100%; }
 
-@media (max-width: 1024px) {
-  .icon-arrange-grid { grid-template-columns: 1fr; }
+.mini-card.rich {
+  position: relative;
+  overflow: hidden;
+  background: linear-gradient(140deg, rgba(255,255,255,0.98), rgba(224, 236, 255, 0.9));
+}
+[data-theme='dark'] .mini-card.rich {
+  background: linear-gradient(145deg, rgba(24, 39, 73, 0.95), rgba(14, 26, 50, 0.92));
+}
+.mini-icon {
+  position: absolute;
+  right: 0.65rem;
+  top: 0.55rem;
+  font-size: 1.05rem;
+  opacity: 0.9;
 }
 
 </style>
@@ -759,15 +727,9 @@ root.innerHTML = `
 
       <section data-view="dashboard" class="view-stack">
         <div class="card-strip" id="dashboardMetrics"></div>
-        <div class="grid two-col">
-          <div class="panel">
-            <div class="panel-head"><h3>ITSM Notifications</h3></div>
-            <div id="notificationPanel"></div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h3>Unified Search Results</h3></div>
-            <div id="searchResults"><p>Start typing in the search bar to find request IDs, service IDs, or marketplace items.</p></div>
-          </div>
+        <div class="panel panel-wide">
+          <div class="panel-head"><h3>Notifications</h3></div>
+          <div id="notificationPanel"></div>
         </div>
         <div class="grid two-col">
           <div class="panel">
@@ -786,7 +748,6 @@ root.innerHTML = `
             <p class="ticketing-link"><a href="https://support.example.com" target="_blank" rel="noopener noreferrer">Open Ticketing Tool</a></p>
           </div>
         </div>
-        <div class="panel" id="approverPanel" style="display:none"></div>
       </section>
 
       <section data-view="request-status" style="display:none" class="view-stack">
@@ -819,11 +780,6 @@ root.innerHTML = `
         <div class="panel">
           <div class="panel-head"><h3>Marketplace</h3></div>
           <div class="catalog-grid" id="catalogGrid"></div>
-        </div>
-        <div class="panel marketplace-icons-panel">
-          <div class="panel-head"><h3>Arrange Marketplace Icons</h3></div>
-          <p>Catalog items are created in ManageIQ. Use this panel to choose which icon each catalog should use in this portal view.</p>
-          <div id="iconArrangeGrid" class="icon-arrange-grid"></div>
         </div>
         <div class="panel" id="dialogPanel" style="display:none"></div>
       </section>
@@ -951,27 +907,14 @@ function renderServiceStatusTable(rows) {
 
 function renderSearchResults(rows) {
   const input = document.getElementById('globalSearch').value.trim().toLowerCase();
-  if (!input) {
-    document.getElementById('searchResults').innerHTML = '<p>Start typing in the search bar to find request IDs, service IDs, or marketplace items.</p>';
-    return;
-  }
+  if (!input) return;
   const requestMatches = rows.filter((row) => row.request_id.toLowerCase().includes(input));
   const serviceMatches = rows.filter((row) => String(row.service_id).includes(input));
   const marketplaceMatches = state.catalogs.filter((catalog) => catalog.name.toLowerCase().includes(input) || String(catalog.id).includes(input));
 
-  const markup = [
-    requestMatches.length
-      ? `<div><h4>Request IDs</h4><ul class="search-list">${requestMatches.map((r) => `<li>${r.request_id} · ${r.request_status} · ${r.service_name}</li>`).join('')}</ul></div>`
-      : '',
-    serviceMatches.length
-      ? `<div><h4>Service IDs</h4><ul class="search-list">${serviceMatches.map((r) => `<li>${r.service_id} · ${r.service_name} · ${r.lifecycle_state}</li>`).join('')}</ul></div>`
-      : '',
-    marketplaceMatches.length
-      ? `<div><h4>Marketplace Items</h4><ul class="search-list">${marketplaceMatches.map((c) => `<li>${c.id} · ${c.name}</li>`).join('')}</ul></div>`
-      : ''
-  ].filter(Boolean).join('');
+  const count = requestMatches.length + serviceMatches.length + marketplaceMatches.length;
+  if (count === 0) return;
 
-  document.getElementById('searchResults').innerHTML = markup || '<p>No matches for your query.</p>';
 }
 
 async function updateServiceTags(serviceId, tags) {
@@ -1022,14 +965,14 @@ function renderAssetsTable() {
 
 const orderedServiceStatus = renderOrderStatusRows();
 const dashboardCards = [
-  ['Active Services', orderedServiceStatus.filter((row) => row.retirement_state === 'active').length, 'Operational services'],
-  ['Expiring Services (≤ 3 months)', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal planning'],
-  ['Retired Services', orderedServiceStatus.filter((row) => row.retirement_state === 'retired').length, 'Already retired'],
-  ['My Support Tickets', state.supportTickets.length, 'Open and resolved tickets']
+  ['🟢', 'Active Services', orderedServiceStatus.filter((row) => row.retirement_state === 'active').length, 'Operational services'],
+  ['🟡', 'Expiring Services (≤ 3 months)', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal planning'],
+  ['⚫', 'Retired Services', orderedServiceStatus.filter((row) => row.retirement_state === 'retired').length, 'Already retired'],
+  ['🎫', 'My Support Tickets', state.supportTickets.length, 'Open and resolved tickets']
 ];
 
 document.getElementById('dashboardMetrics').innerHTML = dashboardCards
-  .map(([label, value, hint]) => `<article class="mini-card"><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
+  .map(([icon, label, value, hint]) => `<article class="mini-card rich"><span class="mini-icon">${icon}</span><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
   .join('');
 
 document.getElementById('notificationPanel').innerHTML = `<ul class="notification-list">${state.notifications
@@ -1050,18 +993,6 @@ document.getElementById('trendingRequests').innerHTML =
     : `<ul class="trend-list">${trendingRequests
         .map((item) => `<li><strong>${item.service_name}</strong><span>${item.requested_on}</span><small>${item.request_status} · ${item.request_details}</small></li>`)
         .join('')}</ul>`;
-
-if (state.profile.isApprover) {
-  const pendingApprovals = orderedServiceStatus.filter((row) => row.lifecycle_state === 'pending approval');
-  const approverPanel = document.getElementById('approverPanel');
-  approverPanel.style.display = 'block';
-  approverPanel.innerHTML = `
-    <div class="panel-head"><h3>Pending For Your Approval</h3></div>
-    ${pendingApprovals.length ? `<ul class="approval-list">${pendingApprovals
-      .map((row) => `<li><strong>${row.request_id}</strong><span>${row.service_name}</span><small>${row.request_details}</small></li>`)
-      .join('')}</ul>` : '<p>No requests pending your approval.</p>'}
-  `;
-}
 
 function renderTicketSummary() {
   const openCount = state.supportTickets.filter((ticket) => ticket.status !== 'Resolved').length;
@@ -1114,50 +1045,6 @@ document.getElementById('healthTiles').innerHTML = [
   .map((item) => `<article class="health-tile ${healthClass(item.health)}"><p>${item.type}</p><h4>${item.name}</h4><span>${item.health}</span><small>${item.detail}</small></article>`)
   .join('');
 
-const iconChoices = ['🖥️', '🗄️', '☸️', '🛠️', '🔒', '📦', '⚙️', '🌐', '🧠'];
-
-function bindCatalogOrderButtons() {
-  document.querySelectorAll('[data-order]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const id = Number(button.dataset.order);
-      const catalog = state.catalogs.find((c) => c.id === id);
-      const fields = state.dialogs[catalog?.dialogId] || state.dialogs['vm-request'] || [];
-      const panel = document.getElementById('dialogPanel');
-      panel.style.display = 'block';
-      panel.innerHTML = `
-        <div class="panel-head"><h3>${catalog?.name || 'Catalog'} - Service Dialog</h3></div>
-        <div class="dialog-grid">
-          ${fields
-            .map((field) => {
-              if (field.type === 'select') {
-                return `<label><span>${field.label}</span><select>${field.options.map((o) => `<option>${o}</option>`).join('')}</select></label>`;
-              }
-              if (field.type === 'textarea') {
-                return `<label><span>${field.label}</span><textarea></textarea></label>`;
-              }
-              return `<label><span>${field.label}</span><input type="${field.type}" /></label>`;
-            })
-            .join('')}
-        </div>
-        <div style="margin-top:.75rem"><button class="btn primary">Submit Request</button></div>
-      `;
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
-}
-
-function renderIconArrangeGrid() {
-  document.getElementById('iconArrangeGrid').innerHTML = state.catalogs
-    .map(
-      (catalog) => `<label class="icon-arrange-row"><span>${catalog.name}</span>
-        <select data-icon-for="${catalog.name}">
-          ${iconChoices.map((icon) => `<option value="${icon}" ${state.catalogIconPrefs[catalog.name] === icon ? 'selected' : ''}>${icon}</option>`).join('')}
-        </select>
-      </label>`
-    )
-    .join('');
-}
-
 function renderCatalogGrid() {
   document.getElementById('catalogGrid').innerHTML = state.catalogs
     .map(
@@ -1173,7 +1060,6 @@ function renderCatalogGrid() {
     )
     .join('');
   bindCatalogOrderButtons();
-  renderIconArrangeGrid();
 }
 
 renderCatalogGrid();
@@ -1217,16 +1103,7 @@ document.addEventListener('click', async (event) => {
 });
 
 document.getElementById('globalSearch').addEventListener('input', () => renderSearchResults(orderedServiceStatus));
-renderSearchResults(orderedServiceStatus);
 
-
-document.addEventListener('change', (event) => {
-  const target = event.target;
-  if (target.matches('[data-icon-for]')) {
-    state.catalogIconPrefs[target.dataset.iconFor] = target.value;
-    renderCatalogGrid();
-  }
-});
 
 </script>
   </body>

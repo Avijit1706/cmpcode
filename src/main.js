@@ -197,15 +197,9 @@ root.innerHTML = `
 
       <section data-view="dashboard" class="view-stack">
         <div class="card-strip" id="dashboardMetrics"></div>
-        <div class="grid two-col">
-          <div class="panel">
-            <div class="panel-head"><h3>ITSM Notifications</h3></div>
-            <div id="notificationPanel"></div>
-          </div>
-          <div class="panel">
-            <div class="panel-head"><h3>Unified Search Results</h3></div>
-            <div id="searchResults"><p>Start typing in the search bar to find request IDs, service IDs, or marketplace items.</p></div>
-          </div>
+        <div class="panel panel-wide">
+          <div class="panel-head"><h3>Notifications</h3></div>
+          <div id="notificationPanel"></div>
         </div>
         <div class="grid two-col">
           <div class="panel">
@@ -224,7 +218,6 @@ root.innerHTML = `
             <p class="ticketing-link"><a href="https://support.example.com" target="_blank" rel="noopener noreferrer">Open Ticketing Tool</a></p>
           </div>
         </div>
-        <div class="panel" id="approverPanel" style="display:none"></div>
       </section>
 
       <section data-view="request-status" style="display:none" class="view-stack">
@@ -257,11 +250,6 @@ root.innerHTML = `
         <div class="panel">
           <div class="panel-head"><h3>Marketplace</h3></div>
           <div class="catalog-grid" id="catalogGrid"></div>
-        </div>
-        <div class="panel marketplace-icons-panel">
-          <div class="panel-head"><h3>Arrange Marketplace Icons</h3></div>
-          <p>Catalog items are created in ManageIQ. Use this panel to choose which icon each catalog should use in this portal view.</p>
-          <div id="iconArrangeGrid" class="icon-arrange-grid"></div>
         </div>
         <div class="panel" id="dialogPanel" style="display:none"></div>
       </section>
@@ -389,27 +377,14 @@ function renderServiceStatusTable(rows) {
 
 function renderSearchResults(rows) {
   const input = document.getElementById('globalSearch').value.trim().toLowerCase();
-  if (!input) {
-    document.getElementById('searchResults').innerHTML = '<p>Start typing in the search bar to find request IDs, service IDs, or marketplace items.</p>';
-    return;
-  }
+  if (!input) return;
   const requestMatches = rows.filter((row) => row.request_id.toLowerCase().includes(input));
   const serviceMatches = rows.filter((row) => String(row.service_id).includes(input));
   const marketplaceMatches = state.catalogs.filter((catalog) => catalog.name.toLowerCase().includes(input) || String(catalog.id).includes(input));
 
-  const markup = [
-    requestMatches.length
-      ? `<div><h4>Request IDs</h4><ul class="search-list">${requestMatches.map((r) => `<li>${r.request_id} · ${r.request_status} · ${r.service_name}</li>`).join('')}</ul></div>`
-      : '',
-    serviceMatches.length
-      ? `<div><h4>Service IDs</h4><ul class="search-list">${serviceMatches.map((r) => `<li>${r.service_id} · ${r.service_name} · ${r.lifecycle_state}</li>`).join('')}</ul></div>`
-      : '',
-    marketplaceMatches.length
-      ? `<div><h4>Marketplace Items</h4><ul class="search-list">${marketplaceMatches.map((c) => `<li>${c.id} · ${c.name}</li>`).join('')}</ul></div>`
-      : ''
-  ].filter(Boolean).join('');
+  const count = requestMatches.length + serviceMatches.length + marketplaceMatches.length;
+  if (count === 0) return;
 
-  document.getElementById('searchResults').innerHTML = markup || '<p>No matches for your query.</p>';
 }
 
 async function updateServiceTags(serviceId, tags) {
@@ -460,14 +435,14 @@ function renderAssetsTable() {
 
 const orderedServiceStatus = renderOrderStatusRows();
 const dashboardCards = [
-  ['Active Services', orderedServiceStatus.filter((row) => row.retirement_state === 'active').length, 'Operational services'],
-  ['Expiring Services (≤ 3 months)', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal planning'],
-  ['Retired Services', orderedServiceStatus.filter((row) => row.retirement_state === 'retired').length, 'Already retired'],
-  ['My Support Tickets', state.supportTickets.length, 'Open and resolved tickets']
+  ['🟢', 'Active Services', orderedServiceStatus.filter((row) => row.retirement_state === 'active').length, 'Operational services'],
+  ['🟡', 'Expiring Services (≤ 3 months)', orderedServiceStatus.filter((row) => row.retirement_state === 'about to retire').length, 'Needs renewal planning'],
+  ['⚫', 'Retired Services', orderedServiceStatus.filter((row) => row.retirement_state === 'retired').length, 'Already retired'],
+  ['🎫', 'My Support Tickets', state.supportTickets.length, 'Open and resolved tickets']
 ];
 
 document.getElementById('dashboardMetrics').innerHTML = dashboardCards
-  .map(([label, value, hint]) => `<article class="mini-card"><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
+  .map(([icon, label, value, hint]) => `<article class="mini-card rich"><span class="mini-icon">${icon}</span><p>${label}</p><h4>${value}</h4><small>${hint}</small></article>`)
   .join('');
 
 document.getElementById('notificationPanel').innerHTML = `<ul class="notification-list">${state.notifications
@@ -488,18 +463,6 @@ document.getElementById('trendingRequests').innerHTML =
     : `<ul class="trend-list">${trendingRequests
         .map((item) => `<li><strong>${item.service_name}</strong><span>${item.requested_on}</span><small>${item.request_status} · ${item.request_details}</small></li>`)
         .join('')}</ul>`;
-
-if (state.profile.isApprover) {
-  const pendingApprovals = orderedServiceStatus.filter((row) => row.lifecycle_state === 'pending approval');
-  const approverPanel = document.getElementById('approverPanel');
-  approverPanel.style.display = 'block';
-  approverPanel.innerHTML = `
-    <div class="panel-head"><h3>Pending For Your Approval</h3></div>
-    ${pendingApprovals.length ? `<ul class="approval-list">${pendingApprovals
-      .map((row) => `<li><strong>${row.request_id}</strong><span>${row.service_name}</span><small>${row.request_details}</small></li>`)
-      .join('')}</ul>` : '<p>No requests pending your approval.</p>'}
-  `;
-}
 
 function renderTicketSummary() {
   const openCount = state.supportTickets.filter((ticket) => ticket.status !== 'Resolved').length;
@@ -552,50 +515,6 @@ document.getElementById('healthTiles').innerHTML = [
   .map((item) => `<article class="health-tile ${healthClass(item.health)}"><p>${item.type}</p><h4>${item.name}</h4><span>${item.health}</span><small>${item.detail}</small></article>`)
   .join('');
 
-const iconChoices = ['🖥️', '🗄️', '☸️', '🛠️', '🔒', '📦', '⚙️', '🌐', '🧠'];
-
-function bindCatalogOrderButtons() {
-  document.querySelectorAll('[data-order]').forEach((button) => {
-    button.addEventListener('click', () => {
-      const id = Number(button.dataset.order);
-      const catalog = state.catalogs.find((c) => c.id === id);
-      const fields = state.dialogs[catalog?.dialogId] || state.dialogs['vm-request'] || [];
-      const panel = document.getElementById('dialogPanel');
-      panel.style.display = 'block';
-      panel.innerHTML = `
-        <div class="panel-head"><h3>${catalog?.name || 'Catalog'} - Service Dialog</h3></div>
-        <div class="dialog-grid">
-          ${fields
-            .map((field) => {
-              if (field.type === 'select') {
-                return `<label><span>${field.label}</span><select>${field.options.map((o) => `<option>${o}</option>`).join('')}</select></label>`;
-              }
-              if (field.type === 'textarea') {
-                return `<label><span>${field.label}</span><textarea></textarea></label>`;
-              }
-              return `<label><span>${field.label}</span><input type="${field.type}" /></label>`;
-            })
-            .join('')}
-        </div>
-        <div style="margin-top:.75rem"><button class="btn primary">Submit Request</button></div>
-      `;
-      panel.scrollIntoView({ behavior: 'smooth', block: 'start' });
-    });
-  });
-}
-
-function renderIconArrangeGrid() {
-  document.getElementById('iconArrangeGrid').innerHTML = state.catalogs
-    .map(
-      (catalog) => `<label class="icon-arrange-row"><span>${catalog.name}</span>
-        <select data-icon-for="${catalog.name}">
-          ${iconChoices.map((icon) => `<option value="${icon}" ${state.catalogIconPrefs[catalog.name] === icon ? 'selected' : ''}>${icon}</option>`).join('')}
-        </select>
-      </label>`
-    )
-    .join('');
-}
-
 function renderCatalogGrid() {
   document.getElementById('catalogGrid').innerHTML = state.catalogs
     .map(
@@ -611,7 +530,6 @@ function renderCatalogGrid() {
     )
     .join('');
   bindCatalogOrderButtons();
-  renderIconArrangeGrid();
 }
 
 renderCatalogGrid();
@@ -655,13 +573,4 @@ document.addEventListener('click', async (event) => {
 });
 
 document.getElementById('globalSearch').addEventListener('input', () => renderSearchResults(orderedServiceStatus));
-renderSearchResults(orderedServiceStatus);
 
-
-document.addEventListener('change', (event) => {
-  const target = event.target;
-  if (target.matches('[data-icon-for]')) {
-    state.catalogIconPrefs[target.dataset.iconFor] = target.value;
-    renderCatalogGrid();
-  }
-});
