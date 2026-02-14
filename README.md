@@ -1,99 +1,162 @@
-# Tata Consultancy Services — SovereignSecure Cloud
-## Cloud Management Portal (TCS SSC Marketplace)
+# ManageIQ Portal (React + TypeScript, Mock Mode)
 
-This portal is a static HTML/CSS/JS front-end that can run immediately in mock mode, and can be switched to real ManageIQ APIs by updating one configuration block.
+A sleek enterprise portal with a Linear/Vercel-inspired visual style (deep blues, crisp cards, smooth transitions), dark/light themes, and all major operational sections.
 
-## 1) Exactly where to configure ManageIQ endpoints and auth
+## Key UX updates
 
-Update **`src/main.js`** in the `MANAGEIQ_CONFIG` object:
+- Service Dialog is now embedded into **Service Catalog templates** (not a separate nav section).
+- Neutral gray interstitial styling has been removed in favor of cleaner blue-toned surfaces.
+- Responsive sidebar + polished cards/tables/charts.
 
-- `baseUrl`: your ManageIQ host URL (must be HTTPS)
-- `endpoints.auth`: auth endpoint used by login
-- `endpoints.rbacFeatures`: RBAC endpoint
-- `endpoints.serviceCatalogs`
-- `endpoints.serviceDialogs`
-- `endpoints.services`
-- `endpoints.requests`
-- `endpoints.serviceOrders`
-- `endpoints.tags`
+## Project Structure
 
-```js
-const MANAGEIQ_CONFIG = {
-  baseUrl: 'https://manageiq.example.com',
-  timeoutMs: 15000,
-  endpoints: {
-    auth: '/api/auth',
-    rbacFeatures: '/api/authorization/features',
-    serviceCatalogs: '/api/service_catalogs',
-    serviceDialogs: '/api/service_dialogs',
-    services: '/api/services',
-    requests: '/api/requests',
-    serviceOrders: '/api/service_orders',
-    tags: '/api/tags'
-  }
-};
+```text
+src/
+├── components/
+│   ├── Auth/           # Authentication components
+│   ├── Layout/         # Sidebar + MainLayout
+│   ├── Shared/         # Reusable components (CatalogCard, DialogForm, ProtectedAction)
+│   └── Views/          # Dashboard, ServiceCatalog, Inventory, Reports, UserProfile
+├── contexts/           # React contexts (AuthContext)
+├── hooks/              # Custom hooks (usePermissions)
+├── services/           # API service abstractions (Keycloak, ManageIQ)
+└── config.ts           # App configuration
 ```
 
-## 2) How authentication parameters are passed
+## Security Features (implementation-ready pattern)
 
-Login form values (`username`, `password`) are sent from `renderLoginPage()` to `authenticateManageIQLocal(username, password)`.
+- Bearer token propagation pattern in service layer.
+- Automatic token refresh lifecycle in `AuthContext`.
+- RBAC-aware UI control through `ProtectedAction` + `usePermissions`.
+- Token persistence in `localStorage` with cleanup on logout.
 
-Authentication call behavior:
-- `manageIqFetch(...)` adds `Authorization: Basic <base64(username:password)>` **only for auth call** when token is not yet available.
-- On successful auth, returned `auth_token` / `token` is stored in `sessionStorage`.
-- All subsequent API calls use `Authorization: Bearer <token>`.
+> This repository currently runs in **mock mode** for demo quality and UI iteration.
 
-## 3) Security controls added
+## Components
 
-Implemented in `src/main.js`:
-- HTTPS enforcement for ManageIQ base URL (`SECURITY_CONFIG.requireHttps`).
-- Session TTL (`sessionTtlMs`, default 30 minutes).
-- Session expiry check during bootstrap.
-- Strict token requirement (no insecure fallback token generation).
-- Request hardening in `fetch`:
-  - timeout + abort
-  - `cache: 'no-store'`
-  - `redirect: 'error'`
-  - `mode: 'cors'`
-  - `referrerPolicy: 'no-referrer'`
-- Centralized session cleanup helper (`clearAuthSession`).
+### Service Catalog
+- Catalog templates shown as reusable cards.
+- “Order Service” triggers template dialog workflow.
+- Dialog rendering is contextually shown under selected catalog.
 
-## 4) Runtime notes for production
+### Dynamic Dialogs
+- Auto-renders based on dialog field metadata.
+- Supports: text, number, boolean, dropdown, textarea.
 
-- Serve only over HTTPS.
-- Do not log tokens in browser console.
-- Keep token lifetime short and rotate on the backend.
-- Restrict CORS on ManageIQ to the portal origin.
-- Prefer HttpOnly secure cookies server-side when available in your architecture.
-- Keep CSP and security headers at reverse proxy (NGINX/Ingress).
+### Inventory
+- VMs, Services, Templates with table views.
+- Permission-based visibility for VM/Service panels.
 
-## 5) Local run
+### Reports
+- VM power state and service distribution charts.
+- Export action placeholders (CSV/PDF buttons).
+
+### User Profile
+- User identity + permission display from auth context.
+
+## RBAC usage example
+
+```tsx
+import { ProtectedAction } from './components/Shared/ProtectedAction';
+
+<ProtectedAction permission="vm_create">
+  <button>Create VM</button>
+</ProtectedAction>
+```
+
+## API integration targets
+
+- `/api/service_catalogs`
+- `/api/service_templates`
+- `/api/service_dialogs`
+- `/api/vms`
+- `/api/services`
+- `/api/templates`
+- `/api/authorization/features`
+
+## Run locally
 
 ```bash
-python3 -m http.server 8080
+npm install
+npm run dev
 ```
 
-Open `http://localhost:8080`.
+## Build
 
-## 6) Standalone preview
+```bash
+npm run build
+npm run preview
+```
 
-`preview-full.html` is a single-file preview copy of the current UI.
+## Deployment (detailed)
 
+### Option 1: NGINX
 
-## 7) Login background theme selector
+1. Build static bundle:
 
-Users can select login theme directly on the login page:
-- Ocean
-- Mountain
-- Digital
+```bash
+npm install
+npm run build
+```
 
-This is stored in browser `localStorage` under `login-theme`.
+2. Copy `dist/` to server path:
 
+```bash
+sudo mkdir -p /var/www/manageiq-portal
+sudo cp -r dist/* /var/www/manageiq-portal/
+```
 
-## 8) Testing with non-SSL ManageIQ (lab only)
+3. Configure NGINX:
 
-In `src/main.js`, `SECURITY_CONFIG` now supports:
-- `allowInsecureHttpForTesting: true` to permit `http://` ManageIQ base URL in test labs.
-- `allowInvalidTlsForTesting`: included for clarity, but browser JavaScript cannot disable certificate validation.
+```nginx
+server {
+  listen 80;
+  server_name portal.example.com;
 
-> Important: Invalid/self-signed TLS certificate bypass is **not possible from frontend code**. If your ManageIQ cert is untrusted, fix trust at browser/OS level or place a trusted reverse proxy in front.
+  root /var/www/manageiq-portal;
+  index index.html;
+
+  location / {
+    try_files $uri $uri/ /index.html;
+  }
+
+  add_header X-Content-Type-Options "nosniff" always;
+  add_header X-Frame-Options "SAMEORIGIN" always;
+  add_header Referrer-Policy "strict-origin-when-cross-origin" always;
+}
+```
+
+4. Enable and reload:
+
+```bash
+sudo nginx -t
+sudo systemctl reload nginx
+```
+
+5. Add TLS with certbot (recommended).
+
+### Option 2: Docker
+
+```Dockerfile
+FROM nginx:stable-alpine
+COPY dist /usr/share/nginx/html
+```
+
+```bash
+npm install
+npm run build
+docker build -t manageiq-portal:latest .
+docker run -d -p 8080:80 --name manageiq-portal manageiq-portal:latest
+```
+
+### Option 3: CDN/Object Storage
+
+1. Upload `dist/` files to bucket.
+2. Enable static hosting.
+3. Put CDN in front.
+4. Configure custom domain and HTTPS.
+5. Cache static assets aggressively; keep `index.html` short-lived.
+
+## Theme customization
+
+Update colors in `src/styles.css` (blue-forward palette by default).
