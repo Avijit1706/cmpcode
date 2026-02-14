@@ -24,7 +24,11 @@ const MANAGEIQ_CONFIG = {
 const SECURITY_CONFIG = {
   sessionTtlMs: 30 * 60 * 1000,
   requireHttps: true,
-  strictRbac: false
+  strictRbac: false,
+  // TESTING ONLY: allow ManageIQ over plain HTTP when your lab server has no TLS
+  allowInsecureHttpForTesting: true,
+  // Browser limitation: certificate validation cannot be bypassed from frontend JavaScript
+  allowInvalidTlsForTesting: false
 };
 
 const SESSION_KEYS = {
@@ -40,7 +44,8 @@ const state = {
     token: null,
     loginError: null,
     authSource: 'manageiq-local',
-    permissions: new Set()
+    permissions: new Set(),
+    loginTheme: localStorage.getItem('login-theme') || 'ocean'
   },
   catalogs: [
     { id: 1, name: 'RHEL App Stack', description: 'Deploy hardened RHEL app stack', dialogId: 'vm-request', used: 32 },
@@ -124,8 +129,15 @@ function buildApiUrl(path) {
 }
 
 function validateSecurityConfig() {
-  if (SECURITY_CONFIG.requireHttps && !MANAGEIQ_CONFIG.baseUrl.startsWith('https://')) {
+  const isHttps = MANAGEIQ_CONFIG.baseUrl.startsWith('https://');
+  if (SECURITY_CONFIG.requireHttps && !SECURITY_CONFIG.allowInsecureHttpForTesting && !isHttps) {
     throw new Error('ManageIQ baseUrl must use HTTPS in production.');
+  }
+  if (!isHttps && SECURITY_CONFIG.allowInsecureHttpForTesting) {
+    console.warn('Testing mode: allowing insecure HTTP ManageIQ endpoint. Do not use in production.');
+  }
+  if (SECURITY_CONFIG.allowInvalidTlsForTesting) {
+    console.warn('Browser security model does not allow bypassing invalid TLS certificates from frontend code.');
   }
 }
 
@@ -220,7 +232,7 @@ function setTheme(next) {
 function renderLoginPage() {
   root.innerHTML = `
     <div class="login-shell">
-      <div class="login-hero"></div>
+      <div class="login-hero" data-login-theme="${htmlEscape(state.auth.loginTheme)}"></div>
       <div class="login-panel">
         <p class="eyebrow">Tata Consultancy Services</p>
         <h1>SovereignSecure Cloud</h1>
@@ -228,6 +240,11 @@ function renderLoginPage() {
         <form id="loginForm" class="ticket-form">
           <label><span>Username</span><input id="loginUsername" type="text" autocomplete="username" required /></label>
           <label><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" required /></label>
+          <label><span>Login Theme</span><select id="loginTheme">
+            <option value="ocean">Ocean</option>
+            <option value="mountain">Mountain</option>
+            <option value="digital">Digital</option>
+          </select></label>
           <button class="btn primary" type="submit">Sign In</button>
         </form>
         <p class="login-help"><a href="#" id="forgotPasswordLink">Forgot password?</a></p>
@@ -240,6 +257,16 @@ function renderLoginPage() {
   document.getElementById('forgotPasswordLink').addEventListener('click', (event) => {
     event.preventDefault();
     alert('Please use the ManageIQ password reset workflow or contact your Cloud Platform administrator.');
+  });
+
+  const loginThemeSelect = document.getElementById('loginTheme');
+  loginThemeSelect.value = state.auth.loginTheme || 'ocean';
+  loginThemeSelect.addEventListener('change', (event) => {
+    const nextTheme = event.target.value;
+    state.auth.loginTheme = nextTheme;
+    localStorage.setItem('login-theme', nextTheme);
+    const hero = document.querySelector('.login-hero');
+    if (hero) hero.setAttribute('data-login-theme', nextTheme);
   });
 
   document.getElementById('loginForm').addEventListener('submit', async (event) => {
@@ -516,7 +543,7 @@ function renderAppShell() {
 
   document.getElementById('logoutBtn').addEventListener('click', () => {
     clearAuthSession();
-    state.auth = { isAuthenticated: false, username: null, token: null, loginError: null, authSource: 'manageiq-local', permissions: new Set() };
+    state.auth = { isAuthenticated: false, username: null, token: null, loginError: null, authSource: 'manageiq-local', permissions: new Set(), loginTheme: localStorage.getItem('login-theme') || 'ocean' };
     renderLoginPage();
   });
 

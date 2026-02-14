@@ -78,3 +78,22 @@ Open `http://localhost:8080`.
 ## 6) Standalone preview
 
 `preview-full.html` is a single-file preview copy of the current UI.
+
+
+## 7) Login background theme selector
+
+Users can select login theme directly on the login page:
+- Ocean
+- Mountain
+- Digital
+
+This is stored in browser `localStorage` under `login-theme`.
+
+
+## 8) Testing with non-SSL ManageIQ (lab only)
+
+In `src/main.js`, `SECURITY_CONFIG` now supports:
+- `allowInsecureHttpForTesting: true` to permit `http://` ManageIQ base URL in test labs.
+- `allowInvalidTlsForTesting`: included for clarity, but browser JavaScript cannot disable certificate validation.
+
+> Important: Invalid/self-signed TLS certificate bypass is **not possible from frontend code**. If your ManageIQ cert is untrusted, fix trust at browser/OS level or place a trusted reverse proxy in front.
