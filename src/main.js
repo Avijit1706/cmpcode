@@ -21,6 +21,18 @@ const MANAGEIQ_CONFIG = {
   }
 };
 
+const SECURITY_CONFIG = {
+  sessionTtlMs: 30 * 60 * 1000,
+  requireHttps: true,
+  strictRbac: false
+};
+
+const SESSION_KEYS = {
+  token: 'miq-auth-token',
+  user: 'miq-auth-user',
+  expiresAt: 'miq-auth-expires-at'
+};
+
 const state = {
   auth: {
     isAuthenticated: false,
@@ -111,6 +123,18 @@ function buildApiUrl(path) {
   return `${MANAGEIQ_CONFIG.baseUrl.replace(/\/$/, '')}${path}`;
 }
 
+function validateSecurityConfig() {
+  if (SECURITY_CONFIG.requireHttps && !MANAGEIQ_CONFIG.baseUrl.startsWith('https://')) {
+    throw new Error('ManageIQ baseUrl must use HTTPS in production.');
+  }
+}
+
+function clearAuthSession() {
+  sessionStorage.removeItem(SESSION_KEYS.token);
+  sessionStorage.removeItem(SESSION_KEYS.user);
+  sessionStorage.removeItem(SESSION_KEYS.expiresAt);
+}
+
 /**
  * Generic authenticated ManageIQ API call helper.
  * Authentication parameter passing:
@@ -131,6 +155,9 @@ async function manageIqFetch(path, { method = 'GET', body, username, password, t
       body: body ? JSON.stringify(body) : undefined,
       signal: controller.signal,
       credentials: 'omit',
+      mode: 'cors',
+      redirect: 'error',
+      cache: 'no-store',
       referrerPolicy: 'no-referrer'
     });
     if (!response.ok) throw new Error(`ManageIQ API error (${response.status})`);
@@ -154,9 +181,15 @@ async function authenticateManageIQLocal(username, password) {
     password
   });
 
-  const token = authPayload.auth_token || authPayload.token || btoa(`${username}:${Date.now()}`);
-  sessionStorage.setItem('miq-auth-token', token);
-  sessionStorage.setItem('miq-auth-user', username);
+  const token = authPayload.auth_token || authPayload.token;
+  if (!token) {
+    throw new Error('ManageIQ auth response did not include an auth token.');
+  }
+
+  const expiresAt = Date.now() + SECURITY_CONFIG.sessionTtlMs;
+  sessionStorage.setItem(SESSION_KEYS.token, token);
+  sessionStorage.setItem(SESSION_KEYS.user, username);
+  sessionStorage.setItem(SESSION_KEYS.expiresAt, String(expiresAt));
   return token;
 }
 
@@ -175,7 +208,7 @@ async function fetchManageIqRbac(token) {
 }
 
 function hasPermission(permissionName) {
-  if (!state.auth.permissions.size) return true; // permissive in demo mode if RBAC list absent
+  if (!state.auth.permissions.size) return !SECURITY_CONFIG.strictRbac;
   return state.auth.permissions.has(permissionName);
 }
 
@@ -482,8 +515,7 @@ function renderAppShell() {
   });
 
   document.getElementById('logoutBtn').addEventListener('click', () => {
-    sessionStorage.removeItem('miq-auth-token');
-    sessionStorage.removeItem('miq-auth-user');
+    clearAuthSession();
     state.auth = { isAuthenticated: false, username: null, token: null, loginError: null, authSource: 'manageiq-local', permissions: new Set() };
     renderLoginPage();
   });
@@ -672,14 +704,25 @@ function renderAppShell() {
 }
 
 function bootstrap() {
-  const existingToken = sessionStorage.getItem('miq-auth-token');
-  const existingUser = sessionStorage.getItem('miq-auth-user');
-  if (existingToken && existingUser) {
+  try {
+    validateSecurityConfig();
+  } catch (error) {
+    root.innerHTML = `<div class="panel" style="margin:1rem">${htmlEscape(error.message)}</div>`;
+    return;
+  }
+
+  const existingToken = sessionStorage.getItem(SESSION_KEYS.token);
+  const existingUser = sessionStorage.getItem(SESSION_KEYS.user);
+  const expiresAt = Number(sessionStorage.getItem(SESSION_KEYS.expiresAt) || 0);
+  const isExpired = !expiresAt || Date.now() > expiresAt;
+
+  if (existingToken && existingUser && !isExpired) {
     state.auth.isAuthenticated = true;
     state.auth.username = existingUser;
     state.auth.token = existingToken;
     renderAppShell();
   } else {
+    clearAuthSession();
     renderLoginPage();
   }
 }
