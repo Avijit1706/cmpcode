@@ -520,7 +520,11 @@ body { background: var(--bg-light); }
   background: radial-gradient(circle at 20% 20%, rgba(37, 99, 235, 0.22), transparent 45%), #0b1220;
 }
 .login-hero {
-  background: linear-gradient(160deg, rgba(21, 36, 70, 0.95), rgba(8, 14, 31, 0.96));
+  background-image:
+    linear-gradient(135deg, rgba(3, 7, 18, 0.38), rgba(3, 7, 18, 0.28)),
+    url('https://images.unsplash.com/photo-1507525428034-b723cf961d3e?auto=format&fit=crop&w=1800&q=80');
+  background-size: cover;
+  background-position: center;
   border-right: 1px solid rgba(96, 165, 250, 0.28);
 }
 .login-panel {
@@ -535,6 +539,15 @@ body { background: var(--bg-light); }
 .login-panel .eyebrow { color: #93c5fd; font-weight: 700; letter-spacing: 0.06em; text-transform: uppercase; }
 .login-note { font-size: 0.8rem; }
 .login-error { color: #fca5a5; min-height: 1.1rem; }
+
+.login-help { margin-top: -0.25rem; }
+.login-help a {
+  color: #93c5fd;
+  font-size: 0.85rem;
+  text-decoration: none;
+  font-weight: 600;
+}
+.login-help a:hover { text-decoration: underline; }
 
 @media (max-width: 1024px) {
   .login-shell { grid-template-columns: 1fr; }

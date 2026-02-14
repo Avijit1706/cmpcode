@@ -191,17 +191,23 @@ function renderLoginPage() {
       <div class="login-panel">
         <p class="eyebrow">Tata Consultancy Services</p>
         <h1>SovereignSecure Cloud</h1>
-        <p>Cloud Management Portal — secure local sign-in with ManageIQ-backed RBAC.</p>
+        <p>Cloud Management Portal — Access TCS SSC Marketplace, Service Lifecycle, Requests and Support in one place.</p>
         <form id="loginForm" class="ticket-form">
           <label><span>Username</span><input id="loginUsername" type="text" autocomplete="username" required /></label>
           <label><span>Password</span><input id="loginPassword" type="password" autocomplete="current-password" required /></label>
           <button class="btn primary" type="submit">Sign In</button>
         </form>
+        <p class="login-help"><a href="#" id="forgotPasswordLink">Forgot password?</a></p>
         <p class="login-note">Authentication source: ManageIQ local auth. Session token is stored in sessionStorage only.</p>
         <p id="loginError" class="login-error"></p>
       </div>
     </div>
   `;
+
+  document.getElementById('forgotPasswordLink').addEventListener('click', (event) => {
+    event.preventDefault();
+    alert('Please use the ManageIQ password reset workflow or contact your Cloud Platform administrator.');
+  });
 
   document.getElementById('loginForm').addEventListener('submit', async (event) => {
     event.preventDefault();
@@ -388,14 +394,14 @@ function renderAppShell() {
           <button class="nav-item" data-section="request-status">request status</button>
           <button class="nav-item" data-section="your-services">your services</button>
           <button class="nav-item" data-section="your-assets">your assets</button>
-          <button class="nav-item" data-section="marketplace">marketplace</button>
+          <button class="nav-item" data-section="marketplace">TCS SSC marketplace</button>
         </nav>
       </aside>
       <main class="content">
         <header class="topbar">
           <div class="topbar-left">
             <button class="btn muted mobile-only" id="openSidebar">☰</button>
-            <div><h1>SovereignSecure Cloud</h1><p>Cloud Management Portal</p></div>
+            <div><h1>Cloud Management Portal</h1><p>Access TCS SSC Marketplace, Service Lifecycle, Requests and Support in one place</p></div>
           </div>
           <div class="topbar-right">
             <div class="search-wrap">
@@ -460,7 +466,7 @@ function renderAppShell() {
 
         <section data-view="marketplace" style="display:none" class="view-stack">
           <div class="panel">
-            <div class="panel-head"><h3>Marketplace</h3></div>
+            <div class="panel-head"><h3>TCS SSC Marketplace</h3></div>
             <div class="catalog-grid" id="catalogGrid"></div>
           </div>
           <div class="panel" id="dialogPanel" style="display:none"></div>
